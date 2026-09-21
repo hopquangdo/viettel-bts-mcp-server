@@ -21,6 +21,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import vn.edu.huce.iic.bts_ops_platform.infrastructure.security.ApiAccessDeniedHandler;
 import vn.edu.huce.iic.bts_ops_platform.infrastructure.security.ApiAuthenticationEntryPoint;
 import vn.edu.huce.iic.bts_ops_platform.infrastructure.security.JwtAuthenticationFilter;
+import vn.edu.huce.iic.bts_ops_platform.infrastructure.security.McpApiKeyFilter;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -38,6 +39,7 @@ public class SecurityConfig {
     private final ApiAuthenticationEntryPoint apiAuthenticationEntryPoint;
     private final ApiAccessDeniedHandler apiAccessDeniedHandler;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final McpApiKeyFilter mcpApiKeyFilter;
 
     private static final String[] PUBLIC_ENDPOINTS = {
             "/api/v1/xac-thuc/dang-nhap",
@@ -52,6 +54,9 @@ public class SecurityConfig {
             "/actuator/health",
             "/uploads/**",
 
+            // MCP tool server: bỏ qua JWT đăng nhập; McpApiKeyFilter bắt buộc X-API-Key (fail-closed) và mỗi lần gọi tool
+            // phải kèm token người dùng (McpUserContext).
+            "/mcp/**"
     };
 
     @Bean
@@ -71,7 +76,8 @@ public class SecurityConfig {
                 .exceptionHandling(ex -> ex
                         .authenticationEntryPoint(apiAuthenticationEntryPoint)
                         .accessDeniedHandler(apiAccessDeniedHandler))
-                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(mcpApiKeyFilter, JwtAuthenticationFilter.class);
 
         return http.build();
     }
