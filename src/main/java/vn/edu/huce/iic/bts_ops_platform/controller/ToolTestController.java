@@ -98,9 +98,12 @@ public class ToolTestController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate sinceDate,
             @RequestParam(required = false) Integer page,
             @RequestParam(required = false) Integer pageSize,
-            @RequestParam(required = false) Integer quaHanNgay) {
+            @RequestParam(required = false) Integer quaHanNgay,
+            @RequestParam(required = false) String canBo,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate) {
         VuongMacQueryResponse result = vuongMacToolHandler.query(
-                maDoiTuong, maHopDong, nhaThau, khuVuc, tinhThanh, loaiHopDong, trangThai, kieuVuongMac, giaiDoan, dangMoOnly, query, top, sinceDate, page, pageSize, quaHanNgay);
+                maDoiTuong, maHopDong, nhaThau, khuVuc, tinhThanh, loaiHopDong, trangThai, kieuVuongMac, giaiDoan, dangMoOnly, query, top, sinceDate, page, pageSize, quaHanNgay, canBo, fromDate, toDate);
         return ApiResponse.<VuongMacQueryResponse>build().withData(result).toEntity();
     }
 
@@ -119,9 +122,13 @@ public class ToolTestController {
             @RequestParam(required = false) Integer pageSize,
             @RequestParam(required = false) Double nguongChamTienDo,
             @RequestParam(required = false) Double nguongXanh,
-            @RequestParam(required = false) Double nguongVang) {
+            @RequestParam(required = false) Double nguongVang,
+            @RequestParam(required = false) Integer top,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate,
+            @RequestParam(required = false) String loaiNgay) {
         HopDongQueryResponse result = hopDongToolHandler.query(
-                maDoiTuong, maHopDong, nhaThau, khuVuc, tinhThanh, loaiHopDong, kieuHopDong, query, page, pageSize, nguongChamTienDo, nguongXanh, nguongVang);
+                maDoiTuong, maHopDong, nhaThau, khuVuc, tinhThanh, loaiHopDong, kieuHopDong, query, page, pageSize, nguongChamTienDo, nguongXanh, nguongVang, top, fromDate, toDate, loaiNgay);
         return ApiResponse.<HopDongQueryResponse>build().withData(result).toEntity();
     }
 
@@ -135,9 +142,11 @@ public class ToolTestController {
             @RequestParam(required = false) String tinhThanh,
             @RequestParam(required = false) String trangThaiHopDong,
             @RequestParam(required = false) Boolean coNhomUuTien,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate,
             @RequestParam(required = false) Integer page,
             @RequestParam(required = false) Integer pageSize) {
-        HoSoDoiTuongQueryResponse result = hoSoDoiTuongToolHandler.query(maDoiTuong, maHopDong, nhaThau, khuVuc, tinhThanh, trangThaiHopDong, coNhomUuTien, page, pageSize);
+        HoSoDoiTuongQueryResponse result = hoSoDoiTuongToolHandler.query(maDoiTuong, maHopDong, nhaThau, khuVuc, tinhThanh, trangThaiHopDong, coNhomUuTien, fromDate, toDate, page, pageSize);
         return ApiResponse.<HoSoDoiTuongQueryResponse>build().withData(result).toEntity();
     }
 
@@ -150,9 +159,11 @@ public class ToolTestController {
             @RequestParam(required = false) Double nguongCanhBao,
             @RequestParam(required = false) String loaiHopDong,
             @RequestParam(required = false) String statusFilter,
+            @RequestParam(required = false) String khuVuc,
+            @RequestParam(required = false) String tinhThanh,
             @RequestParam(required = false) Integer page,
             @RequestParam(required = false) Integer pageSize) {
-        NganHoQueryResponse result = nganHoToolHandler.query(maHopDong, query, heSo, nguongCanhBao, loaiHopDong, statusFilter, page, pageSize);
+        NganHoQueryResponse result = nganHoToolHandler.query(maHopDong, query, heSo, nguongCanhBao, loaiHopDong, statusFilter, khuVuc, tinhThanh, page, pageSize);
         return ApiResponse.<NganHoQueryResponse>build().withData(result).toEntity();
     }
 
@@ -222,9 +233,11 @@ public class ToolTestController {
             @RequestParam(required = false) Boolean lichSu,
             @RequestParam(required = false) Integer top,
             @RequestParam(required = false) Integer page,
-            @RequestParam(required = false) Integer pageSize) {
+            @RequestParam(required = false) Integer pageSize,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate) {
         PhanCongQueryResponse result = phanCongToolHandler.query(
-                maVung, nhaThau, canBo, query, maHopDong, khuVuc, tinhThanh, maDoiTuong, giaiDoan, lichSu, top, page, pageSize);
+                maVung, nhaThau, canBo, query, maHopDong, khuVuc, tinhThanh, maDoiTuong, giaiDoan, lichSu, top, page, pageSize, fromDate, toDate);
         return ApiResponse.<PhanCongQueryResponse>build().withData(result).toEntity();
     }
 
@@ -243,9 +256,11 @@ public class ToolTestController {
             @RequestParam(required = false) Integer top,
             @RequestParam(required = false) Integer page,
             @RequestParam(required = false) Integer pageSize,
-            @RequestParam(required = false) Integer soNgayThieuCapNhat) {
+            @RequestParam(required = false) Integer soNgayThieuCapNhat,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate) {
         TramTonQueryResponse result = tramTonToolHandler.query(
-                maDoiTuong, maHopDong, nhaThau, khuVuc, tinhThanh, loaiHopDong, tab, sinceDate, quaHanNgay, top, page, pageSize, soNgayThieuCapNhat);
+                maDoiTuong, maHopDong, nhaThau, khuVuc, tinhThanh, loaiHopDong, tab, sinceDate, quaHanNgay, top, page, pageSize, soNgayThieuCapNhat, fromDate, toDate);
         return ApiResponse.<TramTonQueryResponse>build().withData(result).toEntity();
     }
 

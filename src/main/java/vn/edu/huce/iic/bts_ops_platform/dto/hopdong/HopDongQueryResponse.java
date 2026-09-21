@@ -27,4 +27,6 @@ public class HopDongQueryResponse {
     private List<HopDongXepHangTinhToolItem> xepHangTinh;
     /** Phân bố + lịch sử chuyển bước — chỉ có khi truyền maHopDong. */
     private HopDongTheoBuocResponse theoBuoc;
+    /** Số đối tượng hoàn thành thi công trong khoảng fromDate-toDate — chỉ có khi truyền fromDate/toDate. */
+    private Long doiTuongHoanThanhTrongKy;
 }

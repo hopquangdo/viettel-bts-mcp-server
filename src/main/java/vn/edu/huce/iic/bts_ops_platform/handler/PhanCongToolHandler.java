@@ -8,5 +8,6 @@ public interface PhanCongToolHandler {
     PhanCongQueryResponse query(String vung, String nhaThau, String canBo,
                                 String query, String hopDong, String khuVuc, String tinhThanh, String doiTuong,
                                 String giaiDoan, Boolean lichSu, Integer top,
-                                Integer page, Integer pageSize);
+                                Integer page, Integer pageSize,
+            java.time.LocalDate fromDate, java.time.LocalDate toDate);
 }

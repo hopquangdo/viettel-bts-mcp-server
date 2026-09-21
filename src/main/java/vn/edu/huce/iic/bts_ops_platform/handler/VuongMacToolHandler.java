@@ -9,5 +9,6 @@ public interface VuongMacToolHandler {
     VuongMacQueryResponse query(String doiTuong, String hopDong, String nhaThau, String khuVuc, String tinhThanh, String loaiHopDong,
                                 String trangThai, String kieuVuongMac, String giaiDoan, Boolean dangMoOnly,
                                 String query, Integer top, LocalDate sinceDate,
-                                Integer page, Integer pageSize, Integer quaHanNgay);
+                                Integer page, Integer pageSize, Integer quaHanNgay,
+                                String canBo, LocalDate fromDate, LocalDate toDate);
 }

@@ -6,5 +6,6 @@ import vn.edu.huce.iic.bts_ops_platform.dto.hosodoituong.HoSoDoiTuongQueryRespon
 public interface HoSoDoiTuongToolHandler {
 
     HoSoDoiTuongQueryResponse query(String doiTuong, String hopDong, String nhaThau, String khuVuc, String tinhThanh,
-                                    String trangThaiHopDong, Boolean coNhomUuTien, Integer page, Integer pageSize);
+                                    String trangThaiHopDong, Boolean coNhomUuTien,
+            java.time.LocalDate fromDate, java.time.LocalDate toDate, Integer page, Integer pageSize);
 }

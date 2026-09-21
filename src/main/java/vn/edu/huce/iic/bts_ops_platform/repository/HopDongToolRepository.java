@@ -80,6 +80,8 @@ public interface HopDongToolRepository extends JpaRepository<HopDong, UUID> {
             WHERE h.ngay_xoa IS NULL AND h.hoat_dong = TRUE
               AND (CAST(:keyword AS text) IS NULL
                    OR LOWER(h.ma_hop_dong) LIKE :keyword ESCAPE '\\' OR LOWER(COALESCE(h.ten, '')) LIKE :keyword ESCAPE '\\')
+              AND (CAST(:fromDate AS date) IS NULL OR (CASE WHEN CAST(:loaiNgay AS text) = 'han_hop_dong' THEN h.han_hop_dong ELSE h.ngay_thuc_hien END) >= CAST(:fromDate AS date))
+              AND (CAST(:toDate AS date) IS NULL OR (CASE WHEN CAST(:loaiNgay AS text) = 'han_hop_dong' THEN h.han_hop_dong ELSE h.ngay_thuc_hien END) <= CAST(:toDate AS date))
               AND (CAST(:loaiHopDongId AS uuid) IS NULL OR h.loai_hop_dong_id = CAST(:loaiHopDongId AS uuid))
               AND (CAST(:kieuHopDongId AS uuid) IS NULL OR h.kieu_hop_dong_id = CAST(:kieuHopDongId AS uuid))
               AND ((CAST(:nhaThauId AS uuid) IS NULL AND CAST(:doiTuongId AS uuid) IS NULL AND CAST(:tinhThanhId AS uuid) IS NULL)
@@ -96,6 +98,8 @@ public interface HopDongToolRepository extends JpaRepository<HopDong, UUID> {
             WHERE h.ngay_xoa IS NULL AND h.hoat_dong = TRUE
               AND (CAST(:keyword AS text) IS NULL
                    OR LOWER(h.ma_hop_dong) LIKE :keyword ESCAPE '\\' OR LOWER(COALESCE(h.ten, '')) LIKE :keyword ESCAPE '\\')
+              AND (CAST(:fromDate AS date) IS NULL OR (CASE WHEN CAST(:loaiNgay AS text) = 'han_hop_dong' THEN h.han_hop_dong ELSE h.ngay_thuc_hien END) >= CAST(:fromDate AS date))
+              AND (CAST(:toDate AS date) IS NULL OR (CASE WHEN CAST(:loaiNgay AS text) = 'han_hop_dong' THEN h.han_hop_dong ELSE h.ngay_thuc_hien END) <= CAST(:toDate AS date))
               AND (CAST(:loaiHopDongId AS uuid) IS NULL OR h.loai_hop_dong_id = CAST(:loaiHopDongId AS uuid))
               AND (CAST(:kieuHopDongId AS uuid) IS NULL OR h.kieu_hop_dong_id = CAST(:kieuHopDongId AS uuid))
               AND ((CAST(:nhaThauId AS uuid) IS NULL AND CAST(:doiTuongId AS uuid) IS NULL AND CAST(:tinhThanhId AS uuid) IS NULL)
@@ -108,7 +112,32 @@ public interface HopDongToolRepository extends JpaRepository<HopDong, UUID> {
             nativeQuery = true)
     Page<HopDong> search(@Param("keyword") String keyword, @Param("loaiHopDongId") UUID loaiHopDongId, @Param("kieuHopDongId") UUID kieuHopDongId,
                           @Param("nhaThauId") UUID nhaThauId, @Param("doiTuongId") UUID doiTuongId,
-                          @Param("tinhThanhId") UUID tinhThanhId, Pageable pageable);
+                          @Param("tinhThanhId") UUID tinhThanhId,
+                          @Param("fromDate") java.time.LocalDate fromDate, @Param("toDate") java.time.LocalDate toDate,
+                          @Param("loaiNgay") String loaiNgay, Pageable pageable);
+
+    /** Số đối tượng hoàn thành thi công (ngay_ht_tc) trong khoảng [fromDate, toDate] theo bộ lọc hiện tại. */
+    @Query(value = """
+            SELECT COUNT(DISTINCT d.id)
+            FROM hop_dong_doi_tuong d
+            INNER JOIN hop_dong h ON h.id = d.hop_dong_id AND h.ngay_xoa IS NULL AND h.hoat_dong = TRUE
+            WHERE d.ngay_xoa IS NULL AND d.hoat_dong = TRUE AND d.ngay_ht_tc IS NOT NULL
+              AND (CAST(:fromDate AS date) IS NULL OR CAST(d.ngay_ht_tc AS date) >= CAST(:fromDate AS date))
+              AND (CAST(:toDate AS date) IS NULL OR CAST(d.ngay_ht_tc AS date) <= CAST(:toDate AS date))
+              AND (CAST(:khuVucId AS uuid) IS NULL OR d.khu_vuc_id = CAST(:khuVucId AS uuid))
+              AND (CAST(:tinhThanhId AS uuid) IS NULL OR d.tinh_thanh_id = CAST(:tinhThanhId AS uuid))
+              AND (CAST(:nhaThauId AS uuid) IS NULL OR d.nha_thau_id = CAST(:nhaThauId AS uuid))
+              AND (CAST(:hopDongId AS uuid) IS NULL OR h.id = CAST(:hopDongId AS uuid))
+              AND (CAST(:loaiHopDongId AS uuid) IS NULL OR h.loai_hop_dong_id = CAST(:loaiHopDongId AS uuid))
+              AND (CAST(:kieuHopDongId AS uuid) IS NULL OR h.kieu_hop_dong_id = CAST(:kieuHopDongId AS uuid))
+              AND (CAST(:doiTuongId AS uuid) IS NULL OR (d.doi_tuong_quan_ly_id = CAST(:doiTuongId AS uuid) OR d.id = CAST(:doiTuongId AS uuid)))
+            """, nativeQuery = true)
+    long countDoiTuongHoanThanhTrongKy(@Param("fromDate") java.time.LocalDate fromDate, @Param("toDate") java.time.LocalDate toDate,
+                                       @Param("khuVucId") UUID khuVucId, @Param("tinhThanhId") UUID tinhThanhId,
+                                       @Param("nhaThauId") UUID nhaThauId, @Param("hopDongId") UUID hopDongId,
+                                       @Param("loaiHopDongId") UUID loaiHopDongId, @Param("kieuHopDongId") UUID kieuHopDongId,
+                                       @Param("doiTuongId") UUID doiTuongId);
+
 
     @Query(value = """
             SELECT COUNT(*)::int AS tong,

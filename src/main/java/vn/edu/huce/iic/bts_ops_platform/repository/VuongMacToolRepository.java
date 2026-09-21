@@ -37,6 +37,9 @@ public interface VuongMacToolRepository extends JpaRepository<VuongMac, UUID> {
               AND (CAST(:giaiDoan AS text) IS NULL OR LOWER(v.giai_doan) = LOWER(:giaiDoan))
               AND (CAST(:trangThai AS text) IS NULL OR v.trang_thai = :trangThai)
               AND (CAST(:kieuVuongMac AS text) IS NULL OR v.kieu_vuong_mac = :kieuVuongMac)
+              AND (CAST(:canBoId AS uuid) IS NULL OR v.nguoi_xu_ly_id = CAST(:canBoId AS uuid))
+              AND (CAST(:ngayTaoFrom AS timestamptz) IS NULL OR v.ngay_tao >= CAST(:ngayTaoFrom AS timestamptz))
+              AND (CAST(:ngayTaoTo AS timestamptz) IS NULL OR v.ngay_tao < CAST(:ngayTaoTo AS timestamptz))
               AND (CAST(:dangMoOnly AS boolean) IS NOT TRUE OR v.trang_thai IN ('pending', 'in_progress'))
             ORDER BY v.ngay_tao DESC
             """,
@@ -58,6 +61,9 @@ public interface VuongMacToolRepository extends JpaRepository<VuongMac, UUID> {
               AND (CAST(:giaiDoan AS text) IS NULL OR LOWER(v.giai_doan) = LOWER(:giaiDoan))
               AND (CAST(:trangThai AS text) IS NULL OR v.trang_thai = :trangThai)
               AND (CAST(:kieuVuongMac AS text) IS NULL OR v.kieu_vuong_mac = :kieuVuongMac)
+              AND (CAST(:canBoId AS uuid) IS NULL OR v.nguoi_xu_ly_id = CAST(:canBoId AS uuid))
+              AND (CAST(:ngayTaoFrom AS timestamptz) IS NULL OR v.ngay_tao >= CAST(:ngayTaoFrom AS timestamptz))
+              AND (CAST(:ngayTaoTo AS timestamptz) IS NULL OR v.ngay_tao < CAST(:ngayTaoTo AS timestamptz))
               AND (CAST(:dangMoOnly AS boolean) IS NOT TRUE OR v.trang_thai IN ('pending', 'in_progress'))
             """,
             nativeQuery = true)
@@ -66,7 +72,7 @@ public interface VuongMacToolRepository extends JpaRepository<VuongMac, UUID> {
                            @Param("tinhThanhId") UUID tinhThanhId, @Param("khuVucId") UUID khuVucId,
                            @Param("giaiDoan") String giaiDoan, @Param("trangThai") String trangThai,
                            @Param("kieuVuongMac") String kieuVuongMac, @Param("dangMoOnly") Boolean dangMoOnly,
-                           @Param("loaiHopDongId") UUID loaiHopDongId, Pageable pageable);
+                           @Param("loaiHopDongId") UUID loaiHopDongId, @Param("canBoId") UUID canBoId, @Param("ngayTaoFrom") Instant ngayTaoFrom, @Param("ngayTaoTo") Instant ngayTaoTo, Pageable pageable);
 
     /** row: [id, maHopDong, tenHopDong, tenLoaiHopDong, tenKhuVuc, tenTinh, tenNhaThau, tenNguoiXuLy]. */
     @Query(value = """
@@ -108,12 +114,15 @@ public interface VuongMacToolRepository extends JpaRepository<VuongMac, UUID> {
               AND (CAST(:loaiHopDongId AS uuid) IS NULL OR v.hop_dong_id IN (SELECT hl.id FROM hop_dong hl WHERE hl.loai_hop_dong_id = CAST(:loaiHopDongId AS uuid)))
               AND (CAST(:doiTuongId AS uuid) IS NULL OR (d.doi_tuong_quan_ly_id = CAST(:doiTuongId AS uuid) OR d.id = CAST(:doiTuongId AS uuid)))
               AND (CAST(:giaiDoan AS text) IS NULL OR LOWER(v.giai_doan) = LOWER(:giaiDoan))
+              AND (CAST(:canBoId AS uuid) IS NULL OR v.nguoi_xu_ly_id = CAST(:canBoId AS uuid))
+              AND (CAST(:ngayTaoFrom AS timestamptz) IS NULL OR v.ngay_tao >= CAST(:ngayTaoFrom AS timestamptz))
+              AND (CAST(:ngayTaoTo AS timestamptz) IS NULL OR v.ngay_tao < CAST(:ngayTaoTo AS timestamptz))
             GROUP BY v.kieu_vuong_mac
             """, nativeQuery = true)
     List<Object[]> countGroupByKieuFiltered(@Param("hopDongId") UUID hopDongId, @Param("nhaThauId") UUID nhaThauId,
                                             @Param("tinhThanhId") UUID tinhThanhId, @Param("doiTuongId") UUID doiTuongId,
                                             @Param("khuVucId") UUID khuVucId, @Param("giaiDoan") String giaiDoan,
-                                            @Param("loaiHopDongId") UUID loaiHopDongId);
+                                            @Param("loaiHopDongId") UUID loaiHopDongId, @Param("canBoId") UUID canBoId, @Param("ngayTaoFrom") Instant ngayTaoFrom, @Param("ngayTaoTo") Instant ngayTaoTo);
 
     @Query(value = """
             SELECT COALESCE(h.ma_hop_dong, h.ten, '—') AS label, h.ten AS name, COUNT(*) AS value
@@ -131,6 +140,9 @@ public interface VuongMacToolRepository extends JpaRepository<VuongMac, UUID> {
               AND (CAST(:giaiDoan AS text) IS NULL OR LOWER(v.giai_doan) = LOWER(:giaiDoan))
               AND (CAST(:kieuVuongMac AS text) IS NULL OR v.kieu_vuong_mac = :kieuVuongMac)
               AND (CAST(:loaiHopDongId AS uuid) IS NULL OR v.hop_dong_id IN (SELECT hl.id FROM hop_dong hl WHERE hl.loai_hop_dong_id = CAST(:loaiHopDongId AS uuid)))
+              AND (CAST(:canBoId AS uuid) IS NULL OR v.nguoi_xu_ly_id = CAST(:canBoId AS uuid))
+              AND (CAST(:ngayTaoFrom AS timestamptz) IS NULL OR v.ngay_tao >= CAST(:ngayTaoFrom AS timestamptz))
+              AND (CAST(:ngayTaoTo AS timestamptz) IS NULL OR v.ngay_tao < CAST(:ngayTaoTo AS timestamptz))
             GROUP BY v.hop_dong_id, h.ma_hop_dong, h.ten
             ORDER BY value DESC, label
             """, nativeQuery = true)
@@ -141,7 +153,7 @@ public interface VuongMacToolRepository extends JpaRepository<VuongMac, UUID> {
                                                            @Param("khuVucId") UUID khuVucId,
                                                            @Param("giaiDoan") String giaiDoan,
                                                            @Param("kieuVuongMac") String kieuVuongMac,
-                                                           @Param("loaiHopDongId") UUID loaiHopDongId);
+                                                           @Param("loaiHopDongId") UUID loaiHopDongId, @Param("canBoId") UUID canBoId, @Param("ngayTaoFrom") Instant ngayTaoFrom, @Param("ngayTaoTo") Instant ngayTaoTo);
 
     @Query(value = """
             SELECT v.*
@@ -175,6 +187,9 @@ public interface VuongMacToolRepository extends JpaRepository<VuongMac, UUID> {
               AND (CAST(:giaiDoan AS text) IS NULL OR LOWER(v.giai_doan) = LOWER(:giaiDoan))
               AND (CAST(:kieuVuongMac AS text) IS NULL OR v.kieu_vuong_mac = :kieuVuongMac)
               AND (CAST(:loaiHopDongId AS uuid) IS NULL OR v.hop_dong_id IN (SELECT hl.id FROM hop_dong hl WHERE hl.loai_hop_dong_id = CAST(:loaiHopDongId AS uuid)))
+              AND (CAST(:canBoId AS uuid) IS NULL OR v.nguoi_xu_ly_id = CAST(:canBoId AS uuid))
+              AND (CAST(:ngayTaoFrom AS timestamptz) IS NULL OR v.ngay_tao >= CAST(:ngayTaoFrom AS timestamptz))
+              AND (CAST(:ngayTaoTo AS timestamptz) IS NULL OR v.ngay_tao < CAST(:ngayTaoTo AS timestamptz))
             GROUP BY kv.ten
             ORDER BY value DESC, label
             """, nativeQuery = true)
@@ -184,7 +199,7 @@ public interface VuongMacToolRepository extends JpaRepository<VuongMac, UUID> {
                                                          @Param("doiTuongId") UUID doiTuongId,
                                                          @Param("giaiDoan") String giaiDoan,
                                                          @Param("kieuVuongMac") String kieuVuongMac,
-                                                         @Param("loaiHopDongId") UUID loaiHopDongId);
+                                                         @Param("loaiHopDongId") UUID loaiHopDongId, @Param("canBoId") UUID canBoId, @Param("ngayTaoFrom") Instant ngayTaoFrom, @Param("ngayTaoTo") Instant ngayTaoTo);
 
     /**
      * Toàn bộ số đếm của khối tổng quan trong 1 câu (thay cho 7 câu {@code count*}): tổng, theo trạng thái, quá hạn 30 ngày
@@ -192,12 +207,12 @@ public interface VuongMacToolRepository extends JpaRepository<VuongMac, UUID> {
      * row: [total, pending, in_progress, resolved, rejected, overdue30, resolvedTrongKy].
      */
     @Query(value = """
-            SELECT COUNT(*),
-                   COUNT(*) FILTER (WHERE v.trang_thai = 'pending'),
-                   COUNT(*) FILTER (WHERE v.trang_thai = 'in_progress'),
-                   COUNT(*) FILTER (WHERE v.trang_thai = 'resolved'),
-                   COUNT(*) FILTER (WHERE v.trang_thai = 'rejected'),
-                   COUNT(*) FILTER (WHERE v.qua_han_30_ngay = TRUE AND v.trang_thai IN ('pending', 'in_progress')),
+            SELECT COUNT(*) FILTER (WHERE (CAST(:ngayTaoFrom AS timestamptz) IS NULL OR v.ngay_tao >= CAST(:ngayTaoFrom AS timestamptz)) AND (CAST(:ngayTaoTo AS timestamptz) IS NULL OR v.ngay_tao < CAST(:ngayTaoTo AS timestamptz))),
+                   COUNT(*) FILTER (WHERE v.trang_thai = 'pending' AND (CAST(:ngayTaoFrom AS timestamptz) IS NULL OR v.ngay_tao >= CAST(:ngayTaoFrom AS timestamptz)) AND (CAST(:ngayTaoTo AS timestamptz) IS NULL OR v.ngay_tao < CAST(:ngayTaoTo AS timestamptz))),
+                   COUNT(*) FILTER (WHERE v.trang_thai = 'in_progress' AND (CAST(:ngayTaoFrom AS timestamptz) IS NULL OR v.ngay_tao >= CAST(:ngayTaoFrom AS timestamptz)) AND (CAST(:ngayTaoTo AS timestamptz) IS NULL OR v.ngay_tao < CAST(:ngayTaoTo AS timestamptz))),
+                   COUNT(*) FILTER (WHERE v.trang_thai = 'resolved' AND (CAST(:ngayTaoFrom AS timestamptz) IS NULL OR v.ngay_tao >= CAST(:ngayTaoFrom AS timestamptz)) AND (CAST(:ngayTaoTo AS timestamptz) IS NULL OR v.ngay_tao < CAST(:ngayTaoTo AS timestamptz))),
+                   COUNT(*) FILTER (WHERE v.trang_thai = 'rejected' AND (CAST(:ngayTaoFrom AS timestamptz) IS NULL OR v.ngay_tao >= CAST(:ngayTaoFrom AS timestamptz)) AND (CAST(:ngayTaoTo AS timestamptz) IS NULL OR v.ngay_tao < CAST(:ngayTaoTo AS timestamptz))),
+                   COUNT(*) FILTER (WHERE v.qua_han_30_ngay = TRUE AND v.trang_thai IN ('pending', 'in_progress') AND (CAST(:ngayTaoFrom AS timestamptz) IS NULL OR v.ngay_tao >= CAST(:ngayTaoFrom AS timestamptz)) AND (CAST(:ngayTaoTo AS timestamptz) IS NULL OR v.ngay_tao < CAST(:ngayTaoTo AS timestamptz))),
                    COUNT(*) FILTER (WHERE v.trang_thai = 'resolved' AND CAST(:tuFrom AS timestamptz) IS NOT NULL
                                       AND v.ngay_cap_nhat >= CAST(:tuFrom AS timestamptz)
                                       AND v.ngay_cap_nhat < CAST(:denTo AS timestamptz))
@@ -213,6 +228,7 @@ public interface VuongMacToolRepository extends JpaRepository<VuongMac, UUID> {
               AND (CAST(:giaiDoan AS text) IS NULL OR LOWER(v.giai_doan) = LOWER(:giaiDoan))
               AND (CAST(:trangThai AS text) IS NULL OR v.trang_thai = :trangThai)
               AND (CAST(:kieuVuongMac AS text) IS NULL OR v.kieu_vuong_mac = :kieuVuongMac)
+              AND (CAST(:canBoId AS uuid) IS NULL OR v.nguoi_xu_ly_id = CAST(:canBoId AS uuid))
               AND (CAST(:dangMoOnly AS boolean) IS NOT TRUE OR v.trang_thai IN ('pending', 'in_progress'))
             """, nativeQuery = true)
     List<Object[]> thongKeTongQuan(@Param("tuFrom") Instant tuFrom, @Param("denTo") Instant denTo,
@@ -220,5 +236,5 @@ public interface VuongMacToolRepository extends JpaRepository<VuongMac, UUID> {
                                    @Param("tinhThanhId") UUID tinhThanhId, @Param("doiTuongId") UUID doiTuongId,
                                    @Param("khuVucId") UUID khuVucId, @Param("giaiDoan") String giaiDoan,
                                    @Param("trangThai") String trangThai, @Param("kieuVuongMac") String kieuVuongMac,
-                                   @Param("dangMoOnly") Boolean dangMoOnly, @Param("loaiHopDongId") UUID loaiHopDongId);
+                                   @Param("dangMoOnly") Boolean dangMoOnly, @Param("loaiHopDongId") UUID loaiHopDongId, @Param("canBoId") UUID canBoId, @Param("ngayTaoFrom") Instant ngayTaoFrom, @Param("ngayTaoTo") Instant ngayTaoTo);
 }

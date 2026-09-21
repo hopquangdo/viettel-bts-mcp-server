@@ -6,5 +6,5 @@ import vn.edu.huce.iic.bts_ops_platform.dto.nganho.NganHoQueryResponse;
 public interface NganHoToolHandler {
 
     NganHoQueryResponse query(String hopDong, String query, Double heSo, Double nguongCanhBao,
-                              String loaiHopDong, String statusFilter, Integer page, Integer pageSize);
+                              String loaiHopDong, String statusFilter, String khuVuc, String tinhThanh, Integer page, Integer pageSize);
 }

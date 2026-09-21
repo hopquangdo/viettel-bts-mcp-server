@@ -94,6 +94,8 @@ public interface HoSoDoiTuongToolRepository extends JpaRepository<HopDongDoiTuon
             LEFT JOIN doi_tuong_quan_ly dt ON dt.id = d.doi_tuong_quan_ly_id AND dt.ngay_xoa IS NULL
             WHERE d.ngay_xoa IS NULL AND d.hoat_dong = TRUE
               AND d.ngay_ban_giao_mat_bang IS NOT NULL
+              AND (CAST(:fromDate AS date) IS NULL OR d.ngay_ban_giao_mat_bang >= CAST(:fromDate AS date))
+              AND (CAST(:toDate AS date) IS NULL OR d.ngay_ban_giao_mat_bang <= CAST(:toDate AS date))
               AND (d.san_luong_hieu_luc IS NULL OR d.san_luong_hieu_luc = 0)
               AND (CAST(:hopDongId AS uuid) IS NULL OR d.hop_dong_id = CAST(:hopDongId AS uuid))
               AND (CAST(:nhaThauId AS uuid) IS NULL OR d.nha_thau_id = CAST(:nhaThauId AS uuid))
@@ -109,6 +111,8 @@ public interface HoSoDoiTuongToolRepository extends JpaRepository<HopDongDoiTuon
                         INNER JOIN hop_dong h ON h.id = d.hop_dong_id AND h.ngay_xoa IS NULL AND h.hoat_dong = TRUE
                         WHERE d.ngay_xoa IS NULL AND d.hoat_dong = TRUE
                             AND d.ngay_ban_giao_mat_bang IS NOT NULL
+              AND (CAST(:fromDate AS date) IS NULL OR d.ngay_ban_giao_mat_bang >= CAST(:fromDate AS date))
+              AND (CAST(:toDate AS date) IS NULL OR d.ngay_ban_giao_mat_bang <= CAST(:toDate AS date))
                             AND (d.san_luong_hieu_luc IS NULL OR d.san_luong_hieu_luc = 0)
                             AND (CAST(:hopDongId AS uuid) IS NULL OR d.hop_dong_id = CAST(:hopDongId AS uuid))
               AND (CAST(:nhaThauId AS uuid) IS NULL OR d.nha_thau_id = CAST(:nhaThauId AS uuid))
@@ -119,6 +123,6 @@ public interface HoSoDoiTuongToolRepository extends JpaRepository<HopDongDoiTuon
                         """, nativeQuery = true)
         Page<KhaoSatXongChuaCoSanLuongProjection> khaoSatXongChuaCoSanLuong(@Param("hopDongId") UUID hopDongId, @Param("nhaThauId") UUID nhaThauId, @Param("khuVucId") UUID khuVucId, @Param("tinhThanhId") UUID tinhThanhId,
             @Param("trangThaiIds") String trangThaiIds, @Param("coNhomUuTien") Boolean coNhomUuTien,
-                                                                                                                                                 Pageable pageable);
+            @Param("fromDate") java.time.LocalDate fromDate, @Param("toDate") java.time.LocalDate toDate, Pageable pageable);
 
 }

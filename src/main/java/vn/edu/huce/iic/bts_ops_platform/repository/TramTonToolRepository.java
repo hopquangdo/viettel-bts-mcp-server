@@ -136,12 +136,14 @@ public interface TramTonToolRepository extends JpaRepository<HopDongDoiTuong, UU
             ) c
             """ + LOC_UNG_VIEN + """
               AND c.resolved_ngay_ht IS NOT NULL
+              AND (CAST(:fromDate AS date) IS NULL OR c.resolved_ngay_ht >= CAST(:fromDate AS date))
+              AND (CAST(:toDate AS date) IS NULL OR c.resolved_ngay_ht <= CAST(:toDate AS date))
             GROUP BY 1, 2
             """, nativeQuery = true)
     List<Object[]> thongKeChoQuyetToanVaQuaHan(@Param("thresholdDays") int thresholdDays,
                                                 @Param("khuVucId") UUID khuVucId, @Param("tinhThanhId") UUID tinhThanhId, @Param("nhaThauId") UUID nhaThauId,
                                                 @Param("hopDongId") UUID hopDongId, @Param("doiTuongId") UUID doiTuongId,
-                                                @Param("loaiHopDongId") UUID loaiHopDongId);
+                                                @Param("loaiHopDongId") UUID loaiHopDongId, @Param("fromDate") LocalDate fromDate, @Param("toDate") LocalDate toDate);
 
     /** Chưa pháp lý (hợp đồng chưa đủ pháp lý). row: [số trạm, tổng giá trị, tổng giá trị đã cắt phần thập phân]. */
     @Query(value = """
@@ -215,6 +217,8 @@ public interface TramTonToolRepository extends JpaRepository<HopDongDoiTuong, UU
               AND (CAST(:hopDongId AS uuid) IS NULL OR c.hop_dong_id = CAST(:hopDongId AS uuid))
               AND (CAST(:loaiHopDongId AS uuid) IS NULL OR c.loai_hop_dong_id = CAST(:loaiHopDongId AS uuid))
               AND c.resolved_ngay_ht IS NOT NULL
+              AND (CAST(:fromDate AS date) IS NULL OR c.resolved_ngay_ht >= CAST(:fromDate AS date))
+              AND (CAST(:toDate AS date) IS NULL OR c.resolved_ngay_ht <= CAST(:toDate AS date))
               AND (CAST(:tab AS text) IS NULL OR (CAST(:tab AS text) = 'qua_han') = (((NOW() AT TIME ZONE 'Asia/Ho_Chi_Minh')::date
                     - c.resolved_ngay_ht) >= CAST(:thresholdDays AS integer)))
             ORDER BY c.resolved_ngay_ht ASC
@@ -230,13 +234,15 @@ public interface TramTonToolRepository extends JpaRepository<HopDongDoiTuong, UU
               AND (CAST(:hopDongId AS uuid) IS NULL OR c.hop_dong_id = CAST(:hopDongId AS uuid))
               AND (CAST(:loaiHopDongId AS uuid) IS NULL OR c.loai_hop_dong_id = CAST(:loaiHopDongId AS uuid))
               AND c.resolved_ngay_ht IS NOT NULL
+              AND (CAST(:fromDate AS date) IS NULL OR c.resolved_ngay_ht >= CAST(:fromDate AS date))
+              AND (CAST(:toDate AS date) IS NULL OR c.resolved_ngay_ht <= CAST(:toDate AS date))
               AND (CAST(:tab AS text) IS NULL OR (CAST(:tab AS text) = 'qua_han') = (((NOW() AT TIME ZONE 'Asia/Ho_Chi_Minh')::date
                     - c.resolved_ngay_ht) >= CAST(:thresholdDays AS integer)))
             """,
             nativeQuery = true)
     Page<Object[]> search(@Param("nhaThauId") UUID nhaThauId, @Param("hopDongId") UUID hopDongId,
                            @Param("khuVucId") UUID khuVucId, @Param("tinhThanhId") UUID tinhThanhId, @Param("doiTuongId") UUID doiTuongId,
-                           @Param("loaiHopDongId") UUID loaiHopDongId, @Param("tab") String tab, @Param("thresholdDays") int thresholdDays,
+                           @Param("loaiHopDongId") UUID loaiHopDongId, @Param("tab") String tab, @Param("thresholdDays") int thresholdDays, @Param("fromDate") LocalDate fromDate, @Param("toDate") LocalDate toDate,
                            Pageable pageable);
 
     /** Danh sách tab "Chưa pháp lý": đối tượng hoạt động thuộc hợp đồng chưa đủ pháp lý (cùng tập với tổng quan). Dòng cùng dạng với {@code search}, ngày mốc luôn null. */

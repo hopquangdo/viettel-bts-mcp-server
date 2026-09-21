@@ -49,21 +49,27 @@ public class NganHoToolHandlerImpl implements NganHoToolHandler {
 
     private final NganHoToolRepository repository;
     private final HopDongComponent hopDongComponent;
+    private final vn.edu.huce.iic.bts_ops_platform.components.KhuVucComponent khuVucComponent;
+    private final vn.edu.huce.iic.bts_ops_platform.components.TinhComponent tinhComponent;
     private final vn.edu.huce.iic.bts_ops_platform.components.DanhMucComponent danhMucComponent;
     private final McpParallel parallel;
 
     @Override
     public NganHoQueryResponse query(String hopDong, String query, Double heSo, Double nguongCanhBao,
-                                     String loaiHopDong, String statusFilter, Integer page, Integer pageSize) {
+                                     String loaiHopDong, String statusFilter, String khuVuc, String tinhThanh,
+                                     Integer page, Integer pageSize) {
         BigDecimal nguong = nguongCanhBao != null && nguongCanhBao > 0
                 ? BigDecimal.valueOf(nguongCanhBao) : NganHoFormulaCalc.NGUONG_CANH_BAO_MAC_DINH;
         var f_hopDong = parallel.async(() -> hopDongComponent.resolve(hopDong));
         var f_loaiId = parallel.async(() -> danhMucComponent.resolveLoaiHopDong(loaiHopDong));
         var f_heSo = parallel.async(this::heSoGccc);
+        var f_tinh = parallel.async(() -> tinhComponent.resolveId(tinhThanh));
+        UUID khuVucId = khuVucComponent.resolveInScope(khuVuc).id();
         String status = ResolveSupport.enumValue("statusFilter", statusFilter,
                 "all", "thieu", "thua", "can_bang", "alert", "da_qt", "dang_qt", "chua_qt");
         HopDongInfo resolvedHopDong = McpParallel.get(f_hopDong);
         UUID loaiId = McpParallel.get(f_loaiId);
+        UUID tinhThanhId = McpParallel.get(f_tinh);
         UUID hopDongId = resolvedHopDong.id();
 
         BigDecimal heSoGccc = McpParallel.get(f_heSo);
@@ -72,10 +78,10 @@ public class NganHoToolHandlerImpl implements NganHoToolHandler {
 
         // Mọi truy vấn lá độc lập nhau: bắn cùng lúc từ luồng gọi tool (không lồng async), độ trễ = nhánh chậm nhất
         var fAgg = parallel.async(() -> repository.tongQuanAggregate(keyword, NganHoToolRepository.GCCC_LOAI_HOP_DONG_ID,
-                NganHoToolRepository.XAY_MOI_VA_CONLAI_LOAI_HOP_DONG_ID, heSoDung, nguong, loaiId));
-        var fTheoLoai = parallel.async(() -> repository.tongQuanTheoLoai(keyword, loaiId));
-        var fDanhSach = (status != null || loaiId != null)
-                ? parallel.async(() -> computeDanhSach(keyword, heSoDung, nguong, loaiId, "all".equals(status) ? null : status, page, pageSize)) : null;
+                NganHoToolRepository.XAY_MOI_VA_CONLAI_LOAI_HOP_DONG_ID, heSoDung, nguong, loaiId, khuVucId, tinhThanhId));
+        var fTheoLoai = parallel.async(() -> repository.tongQuanTheoLoai(keyword, loaiId, khuVucId, tinhThanhId));
+        var fDanhSach = (status != null || loaiId != null || khuVucId != null || tinhThanhId != null)
+                ? parallel.async(() -> computeDanhSach(keyword, heSoDung, nguong, loaiId, "all".equals(status) ? null : status, khuVucId, tinhThanhId, page, pageSize)) : null;
         var fHd = hopDongId != null ? parallel.async(() -> repository.findById(hopDongId).orElse(null)) : null;
         var fNhom = hopDongId != null ? parallel.async(() -> repository.findNhomByHopDongId(hopDongId)) : null;
         var fCt = hopDongId != null ? parallel.async(() -> repository.findChiTietByHopDongId(hopDongId)) : null;
@@ -106,10 +112,10 @@ public class NganHoToolHandlerImpl implements NganHoToolHandler {
 
     /** Danh sách hợp đồng theo trạng thái ngân sách/quyết toán, cùng tập và cách tính với tổng quan. */
     private PagedResult<NganHoHopDongToolItem> computeDanhSach(String keyword, BigDecimal heSoDung, BigDecimal nguongCanhBao, UUID loaiId,
-                                                              String status, Integer page, Integer pageSize) {
+                                                              String status, UUID khuVucId, UUID tinhThanhId, Integer page, Integer pageSize) {
         Page<Object[]> result = repository.danhSachHopDong(keyword,
                 NganHoToolRepository.GCCC_LOAI_HOP_DONG_ID, NganHoToolRepository.XAY_MOI_VA_CONLAI_LOAI_HOP_DONG_ID,
-                heSoDung, nguongCanhBao, loaiId, status,
+                heSoDung, nguongCanhBao, loaiId, status, khuVucId, tinhThanhId,
                 PagingUtil.toPageRequest(page, pageSize, PagingUtil.DEFAULT_PAGE_SIZE, PagingUtil.MAX_PAGE_SIZE));
         List<NganHoHopDongToolItem> items = result.getContent().stream().map(r -> NganHoHopDongToolItem.builder()
                 .hopDong(HopDongInfo.of((UUID) r[0], (String) r[1], (String) r[2]))

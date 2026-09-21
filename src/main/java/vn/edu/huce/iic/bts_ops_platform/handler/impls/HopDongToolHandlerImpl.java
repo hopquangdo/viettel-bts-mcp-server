@@ -70,7 +70,8 @@ public class HopDongToolHandlerImpl implements HopDongToolHandler {
     @Override
     public HopDongQueryResponse query(String doiTuong, String hopDong, String nhaThau,
                                       String khuVuc, String tinhThanh, String loaiHopDong, String kieuHopDong, String query, Integer page, Integer pageSize,
-                                      Double nguongChamTienDo, Double nguongXanh, Double nguongVang) {
+                                      Double nguongChamTienDo, Double nguongXanh, Double nguongVang,
+                                      Integer top, java.time.LocalDate fromDate, java.time.LocalDate toDate, String loaiNgay) {
         double resolvedNguongCham = nguongChamTienDo != null ? nguongChamTienDo : DEFAULT_NGUONG_CHAM_TIEN_DO;
         double resolvedNguongXanh = nguongXanh != null ? nguongXanh : DEFAULT_NGUONG_XANH;
         double resolvedNguongVang = nguongVang != null ? nguongVang : DEFAULT_NGUONG_VANG;
@@ -94,18 +95,26 @@ public class HopDongToolHandlerImpl implements HopDongToolHandler {
         UUID hopDongId = resolvedHopDong.id();
         UUID doiTuongId = resolvedDoiTuong.id();
         boolean doiTuongCuThe = doiTuongComponent.laCuThe(resolvedDoiTuong);
+        // fromDate/toDate: đảo lại nếu nhập ngược. Lọc danhSach theo ngày bắt đầu thực hiện (mặc định) hoặc hạn hợp đồng (loaiNgay=han_hop_dong).
+        final java.time.LocalDate tuNgay = fromDate != null && toDate != null && fromDate.isAfter(toDate) ? toDate : fromDate;
+        final java.time.LocalDate denNgay = fromDate != null && toDate != null && fromDate.isAfter(toDate) ? fromDate : toDate;
+        final String loaiNgayLoc = loaiNgay != null && loaiNgay.trim().equalsIgnoreCase("han_hop_dong") ? "han_hop_dong" : "ngay_thuc_hien";
+        final int topN = top != null ? Math.min(Math.max(top, 1), 20) : 20;
 
         // Các khối độc lập chạy song song: độ trễ = khối chậm nhất thay vì tổng. Truy vấn của tổng quan phát riêng từng câu.
         var fTrangThai = parallel.async(() -> hopDongToolRepository.thongKeTrangThaiDoiTuongTheoHopDong(khuVucId, tinhThanhId, nhaThauId, hopDongId, doiTuongId, loaiId, kieuId));
         var fTheoHopDong = parallel.async(() -> hopDongToolRepository.thongKeTheoHopDong(khuVucId, tinhThanhId, nhaThauId, hopDongId, doiTuongId, loaiId, kieuId));
         var fNhom = parallel.async(() -> hopDongToolRepository.countTheoNhomFiltered(khuVucId, tinhThanhId, nhaThauId, hopDongId, doiTuongId, loaiId, kieuId));
-        var fDanhSach = (query != null || nhaThauId != null || doiTuongId != null || tinhThanhId != null || loaiId != null || kieuId != null)
-                ? parallel.async(() -> computeDanhSach(query, nhaThauId, doiTuongId, tinhThanhId, loaiId, kieuId, page, pageSize)) : null;
+        var fDanhSach = (query != null || nhaThauId != null || doiTuongId != null || tinhThanhId != null || loaiId != null || kieuId != null
+                || tuNgay != null || denNgay != null)
+                ? parallel.async(() -> computeDanhSach(query, nhaThauId, doiTuongId, tinhThanhId, loaiId, kieuId, tuNgay, denNgay, loaiNgayLoc, page, pageSize)) : null;
         var fThuHep = (khuVucId != null || tinhThanhId != null || nhaThauId != null || hopDongId != null || loaiId != null || kieuId != null)
                 ? parallel.async(() -> computeThongKeThuHep(khuVucId, tinhThanhId, nhaThauId, hopDongId, loaiId, kieuId)) : null;
         var fTienDo = parallel.async(() -> computeCanhBaoTienDo(hopDongId, nhaThauId, tinhThanhId, loaiId, kieuId, resolvedNguongXanh, resolvedNguongVang));
-        var fKhuVuc = (khuVucId == null && !doiTuongCuThe) ? parallel.async(() -> computeXepHangKhuVuc(hopDongId, tinhThanhId, nhaThauId, doiTuongId, loaiId, kieuId)) : null;
-        var fTinh = (hopDongId != null && !doiTuongCuThe) ? parallel.async(() -> computeXepHangTinh(hopDongId)) : null;
+        var fKhuVuc = (khuVucId == null && !doiTuongCuThe) ? parallel.async(() -> computeXepHangKhuVuc(hopDongId, tinhThanhId, nhaThauId, doiTuongId, loaiId, kieuId, topN)) : null;
+        var fTinh = (hopDongId != null && !doiTuongCuThe) ? parallel.async(() -> computeXepHangTinh(hopDongId, topN)) : null;
+        var fHoanThanhKy = (tuNgay != null || denNgay != null)
+                ? parallel.async(() -> hopDongToolRepository.countDoiTuongHoanThanhTrongKy(tuNgay, denNgay, khuVucId, tinhThanhId, nhaThauId, hopDongId, loaiId, kieuId, doiTuongId)) : null;
         var fBuoc = hopDongId != null ? parallel.async(() -> computeTheoBuoc(hopDongId, page, pageSize)) : null;
 
         HopDongTongQuanResponse tongQuan = computeTongQuan(McpParallel.get(fTrangThai), McpParallel.get(fTheoHopDong),
@@ -125,13 +134,14 @@ public class HopDongToolHandlerImpl implements HopDongToolHandler {
                 .xepHangKhuVuc(xepHangKhuVuc)
                 .xepHangTinh(xepHangTinh)
                 .theoBuoc(theoBuoc)
+                .doiTuongHoanThanhTrongKy(fHoanThanhKy != null ? McpParallel.get(fHoanThanhKy) : null)
                 .build();
     }
 
     private List<HopDongXepHangKhuVucToolItem> computeXepHangKhuVuc(UUID hopDongId, UUID tinhThanhId,
                                                                     UUID nhaThauId, UUID doiTuongId,
-                                                                    UUID loaiHopDongId, UUID kieuHopDongId) {
-        return hopDongToolRepository.rankKhuVuc(20, hopDongId, tinhThanhId, nhaThauId, doiTuongId, loaiHopDongId, kieuHopDongId).stream()
+                                                                    UUID loaiHopDongId, UUID kieuHopDongId, int top) {
+        return hopDongToolRepository.rankKhuVuc(top, hopDongId, tinhThanhId, nhaThauId, doiTuongId, loaiHopDongId, kieuHopDongId).stream()
                 .map(HopDongToolHandlerImpl::mapXepHangKhuVuc)
                 .toList();
     }
@@ -145,8 +155,9 @@ public class HopDongToolHandlerImpl implements HopDongToolHandler {
         return item;
     }
 
-    private List<HopDongXepHangTinhToolItem> computeXepHangTinh(UUID hopDongId) {
+    private List<HopDongXepHangTinhToolItem> computeXepHangTinh(UUID hopDongId, int top) {
         return hopDongToolRepository.rankTinhTheoHopDong(hopDongId).stream()
+                .limit(top)
                 .map(HopDongToolHandlerImpl::mapXepHangTinh)
                 .toList();
     }
@@ -283,10 +294,12 @@ public class HopDongToolHandlerImpl implements HopDongToolHandler {
                 .build();
     }
 
-    private HopDongTimKiemResponse computeDanhSach(String query, UUID nhaThauId, UUID doiTuongId, UUID tinhThanhId, UUID loaiId, UUID kieuId, Integer page, Integer pageSize) {
+    private HopDongTimKiemResponse computeDanhSach(String query, UUID nhaThauId, UUID doiTuongId, UUID tinhThanhId, UUID loaiId, UUID kieuId,
+                                                        java.time.LocalDate fromDate, java.time.LocalDate toDate, String loaiNgay,
+                                                        Integer page, Integer pageSize) {
         String keyword = ResolveSupport.likePattern(query);
         Page<HopDong> pageResult = hopDongToolRepository.search(keyword, loaiId, kieuId, nhaThauId, doiTuongId, tinhThanhId,
-            PagingUtil.toPageRequest(page, pageSize, PagingUtil.DEFAULT_PAGE_SIZE, PagingUtil.MAX_PAGE_SIZE));
+            fromDate, toDate, loaiNgay, PagingUtil.toPageRequest(page, pageSize, PagingUtil.DEFAULT_PAGE_SIZE, PagingUtil.MAX_PAGE_SIZE));
         // Bảng danh mục loại/kiểu hợp đồng rất nhỏ — lấy hết 1 lần rồi map trong bộ nhớ thay vì
         // join thêm vào native query "search" (đã DISTINCT h.* khá phức tạp, xem HopDongToolRepository).
         Map<UUID, String> loaiHopDongTenById = new HashMap<>();

@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import vn.edu.huce.iic.bts_ops_platform.modules.business.phancong.entity.PhanCong;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
@@ -20,10 +21,12 @@ public interface PhanCongEntityToolRepository extends JpaRepository<PhanCong, UU
               AND (nguoi_dung_id = :nguoiDungId
                    OR LOWER(TRIM(nha_thau)) = LOWER(TRIM(:hoTen))
                    OR LOWER(TRIM(nha_thau)) = LOWER(TRIM(:tenDangNhap)))
+              AND (CAST(:ngayTaoFrom AS timestamptz) IS NULL OR ngay_tao >= CAST(:ngayTaoFrom AS timestamptz))
+              AND (CAST(:ngayTaoTo AS timestamptz) IS NULL OR ngay_tao < CAST(:ngayTaoTo AS timestamptz))
             """, nativeQuery = true)
     List<PhanCong> findActiveForContractor(@Param("nguoiDungId") UUID nguoiDungId,
                                            @Param("hoTen") String hoTen,
-                                           @Param("tenDangNhap") String tenDangNhap);
+                                           @Param("tenDangNhap") String tenDangNhap, @Param("ngayTaoFrom") Instant ngayTaoFrom, @Param("ngayTaoTo") Instant ngayTaoTo);
 
     /**
      * Thống kê phân công theo khu vực/tỉnh/hoạt động ngay ở DB (trước đây đọc cả bảng phan_cong lên rồi đếm bằng Java).
@@ -41,11 +44,13 @@ public interface PhanCongEntityToolRepository extends JpaRepository<PhanCong, UU
               AND (CAST(:doiTuongId AS uuid) IS NULL OR p.hop_dong_doi_tuong_id IN (SELECT x.id FROM hop_dong_doi_tuong x WHERE x.ngay_xoa IS NULL
                    AND (x.doi_tuong_quan_ly_id = CAST(:doiTuongId AS uuid) OR x.id = CAST(:doiTuongId AS uuid))))
               AND (CAST(:giaiDoan AS text) IS NULL OR LOWER(p.giai_doan) = LOWER(:giaiDoan))
+              AND (CAST(:ngayTaoFrom AS timestamptz) IS NULL OR p.ngay_tao >= CAST(:ngayTaoFrom AS timestamptz))
+              AND (CAST(:ngayTaoTo AS timestamptz) IS NULL OR p.ngay_tao < CAST(:ngayTaoTo AS timestamptz))
             GROUP BY p.khu_vuc_id, p.tinh_thanh_id, p.hoat_dong
             """, nativeQuery = true)
     List<Object[]> thongKe(@Param("maVung") String maVung, @Param("nhaThauPattern") String nhaThauPattern,
                            @Param("hopDongId") UUID hopDongId, @Param("khuVucId") UUID khuVucId, @Param("tinhThanhId") UUID tinhThanhId,
-                           @Param("doiTuongId") UUID doiTuongId, @Param("giaiDoan") String giaiDoan);
+                           @Param("doiTuongId") UUID doiTuongId, @Param("giaiDoan") String giaiDoan, @Param("ngayTaoFrom") Instant ngayTaoFrom, @Param("ngayTaoTo") Instant ngayTaoTo);
 
     /** Danh sách phân công đang hoạt động, lọc và phân trang ở DB. Từ khoá chỉ tìm theo giai đoạn (đã là mẫu LIKE). */
     @Query(value = """
@@ -60,6 +65,8 @@ public interface PhanCongEntityToolRepository extends JpaRepository<PhanCong, UU
               AND (CAST(:doiTuongId AS uuid) IS NULL OR p.hop_dong_doi_tuong_id IN (SELECT x.id FROM hop_dong_doi_tuong x WHERE x.ngay_xoa IS NULL
                    AND (x.doi_tuong_quan_ly_id = CAST(:doiTuongId AS uuid) OR x.id = CAST(:doiTuongId AS uuid))))
               AND (CAST(:giaiDoan AS text) IS NULL OR LOWER(p.giai_doan) = LOWER(:giaiDoan))
+              AND (CAST(:ngayTaoFrom AS timestamptz) IS NULL OR p.ngay_tao >= CAST(:ngayTaoFrom AS timestamptz))
+              AND (CAST(:ngayTaoTo AS timestamptz) IS NULL OR p.ngay_tao < CAST(:ngayTaoTo AS timestamptz))
             ORDER BY p.ngay_tao DESC
             """,
             countQuery = """
@@ -74,10 +81,12 @@ public interface PhanCongEntityToolRepository extends JpaRepository<PhanCong, UU
               AND (CAST(:doiTuongId AS uuid) IS NULL OR p.hop_dong_doi_tuong_id IN (SELECT x.id FROM hop_dong_doi_tuong x WHERE x.ngay_xoa IS NULL
                    AND (x.doi_tuong_quan_ly_id = CAST(:doiTuongId AS uuid) OR x.id = CAST(:doiTuongId AS uuid))))
               AND (CAST(:giaiDoan AS text) IS NULL OR LOWER(p.giai_doan) = LOWER(:giaiDoan))
+              AND (CAST(:ngayTaoFrom AS timestamptz) IS NULL OR p.ngay_tao >= CAST(:ngayTaoFrom AS timestamptz))
+              AND (CAST(:ngayTaoTo AS timestamptz) IS NULL OR p.ngay_tao < CAST(:ngayTaoTo AS timestamptz))
             """, nativeQuery = true)
     Page<PhanCong> search(@Param("keyword") String keyword, @Param("maVung") String maVung,
                           @Param("nhaThauPattern") String nhaThauPattern,
                           @Param("tinhThanhId") UUID tinhThanhId, @Param("hopDongId") UUID hopDongId, @Param("khuVucId") UUID khuVucId,
                           @Param("doiTuongId") UUID doiTuongId, @Param("giaiDoan") String giaiDoan,
-                          @Param("lichSu") Boolean lichSu, Pageable pageable);
+                          @Param("lichSu") Boolean lichSu, @Param("ngayTaoFrom") Instant ngayTaoFrom, @Param("ngayTaoTo") Instant ngayTaoTo, Pageable pageable);
 }

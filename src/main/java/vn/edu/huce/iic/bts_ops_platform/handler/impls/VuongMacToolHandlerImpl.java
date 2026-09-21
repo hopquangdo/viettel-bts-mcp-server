@@ -47,6 +47,7 @@ public class VuongMacToolHandlerImpl implements VuongMacToolHandler {
     private final NhaThauComponent nhaThauComponent;
     private final TinhComponent tinhComponent;
     private final vn.edu.huce.iic.bts_ops_platform.components.KhuVucComponent khuVucComponent;
+    private final vn.edu.huce.iic.bts_ops_platform.components.CanBoComponent canBoComponent;
     private final vn.edu.huce.iic.bts_ops_platform.components.DanhMucComponent danhMucComponent;
     private final McpParallel parallel;
 
@@ -54,16 +55,25 @@ public class VuongMacToolHandlerImpl implements VuongMacToolHandler {
     public VuongMacQueryResponse query(String doiTuong, String hopDong, String nhaThau, String khuVuc, String tinhThanh, String loaiHopDong,
                                        String trangThai, String kieuVuongMac, String giaiDoan, Boolean dangMoOnly,
                                        String query, Integer topIn, LocalDate sinceDateIn,
-                                       Integer page, Integer pageSize, Integer quaHanNgay) {
+                                       Integer page, Integer pageSize, Integer quaHanNgay,
+                                       String canBo, LocalDate fromDate, LocalDate toDate) {
         var f_resolvedNhaThau = parallel.async(() -> nhaThauComponent.resolve(nhaThau));
         var f_resolvedHopDong = parallel.async(() -> hopDongComponent.resolve(hopDong));
         var f_resolvedDoiTuong = parallel.async(() -> doiTuongComponent.resolve(doiTuong));
         var f_tinhThanhId = parallel.async(() -> tinhComponent.resolveId(tinhThanh));
+        var f_canBo = parallel.async(() -> canBoComponent.resolve(canBo));
         // các tra cứu id chạy song song (mỗi tra cứu 1-2 lần khứ hồi tới DB nếu chưa có trong bộ nhớ đệm)
         NhaThauInfo resolvedNhaThau = McpParallel.get(f_resolvedNhaThau);
         HopDongInfo resolvedHopDong = McpParallel.get(f_resolvedHopDong);
         DoiTuongInfo resolvedDoiTuong = McpParallel.get(f_resolvedDoiTuong);
         UUID tinhThanhId = McpParallel.get(f_tinhThanhId);
+        UUID canBoId = McpParallel.get(f_canBo).id();
+        // fromDate/toDate lọc theo ngày tạo vướng mắc (giờ VN); toDate gồm cả ngày đó. Đảo lại nếu nhập ngược.
+        LocalDate tuNgay = fromDate != null && toDate != null && fromDate.isAfter(toDate) ? toDate : fromDate;
+        LocalDate denNgay = fromDate != null && toDate != null && fromDate.isAfter(toDate) ? fromDate : toDate;
+        ZoneId zoneVn = ZoneId.of("Asia/Ho_Chi_Minh");
+        Instant ngayTaoFrom = tuNgay != null ? tuNgay.atStartOfDay(zoneVn).toInstant() : null;
+        Instant ngayTaoTo = denNgay != null ? denNgay.plusDays(1).atStartOfDay(zoneVn).toInstant() : null;
 
         UUID khuVucId = khuVucComponent.resolveInScope(khuVuc).id();
         UUID loaiId = danhMucComponent.resolveLoaiHopDong(loaiHopDong);
@@ -72,12 +82,15 @@ public class VuongMacToolHandlerImpl implements VuongMacToolHandler {
         String kieuLoc = chuanHoa(kieuVuongMac);
         String giaiDoanLoc = chuanHoa(giaiDoan);
         Boolean moOnly = Boolean.TRUE.equals(dangMoOnly) ? Boolean.TRUE : null;
-        Instant sinceDate = sinceDateIn != null
-                ? sinceDateIn.atStartOfDay(ZoneId.systemDefault()).toInstant() : null;
+        // Kỳ tính "đã xử lý trong kỳ": ưu tiên [fromDate, toDate], nếu không thì [sinceDate, nay).
+        Instant sinceDate = ngayTaoFrom != null ? ngayTaoFrom
+                : sinceDateIn != null ? sinceDateIn.atStartOfDay(ZoneId.systemDefault()).toInstant() : null;
+        Instant denKy = ngayTaoTo != null ? ngayTaoTo : Instant.now();
         UUID hopDongId = resolvedHopDong.id();
         UUID nhaThauId = resolvedNhaThau.id();
         boolean coDanhSach = query != null || nhaThauId != null || hopDongId != null || resolvedDoiTuong.id() != null || tinhThanhId != null
-                || khuVucId != null || loaiId != null || trangThaiLoc != null || kieuLoc != null || giaiDoanLoc != null || moOnly != null;
+                || khuVucId != null || loaiId != null || trangThaiLoc != null || kieuLoc != null || giaiDoanLoc != null || moOnly != null
+                || canBoId != null || ngayTaoFrom != null || ngayTaoTo != null;
         int top = topIn != null ? Math.min(Math.max(topIn, 1), 10) : 5;
         // Ngưỡng quá hạn (ngày): ưu tiên tham số quaHanNgay, sau đó sinceDate, mặc định 30 ngày (khớp cột quaHan30Ngay của REST).
         int soNgay = quaHanNgay != null && quaHanNgay >= 0 ? quaHanNgay
@@ -85,27 +98,28 @@ public class VuongMacToolHandlerImpl implements VuongMacToolHandler {
         Instant nguongNgay = Instant.now().minus(Duration.ofDays(soNgay));
         var pageable = PagingUtil.toPageRequest(page, pageSize, PagingUtil.DEFAULT_PAGE_SIZE, PagingUtil.MAX_PAGE_SIZE);
         boolean coFilter = hopDongId != null || nhaThauId != null || tinhThanhId != null || resolvedDoiTuong.id() != null
-                || khuVucId != null || loaiId != null || giaiDoanLoc != null;
+                || khuVucId != null || loaiId != null || giaiDoanLoc != null
+                || canBoId != null || ngayTaoFrom != null || ngayTaoTo != null;
 
         // Giai đoạn 1: các truy vấn độc lập chạy song song
-        var fCounts = parallel.async(() -> vuongMacToolRepository.thongKeTongQuan(sinceDate, Instant.now(), hopDongId, nhaThauId, tinhThanhId, resolvedDoiTuong.id(),
-                khuVucId, giaiDoanLoc, trangThaiLoc, kieuLoc, moOnly, loaiId));
+        var fCounts = parallel.async(() -> vuongMacToolRepository.thongKeTongQuan(sinceDate, denKy, hopDongId, nhaThauId, tinhThanhId, resolvedDoiTuong.id(),
+                khuVucId, giaiDoanLoc, trangThaiLoc, kieuLoc, moOnly, loaiId, canBoId, ngayTaoFrom, ngayTaoTo));
         var fKieu = parallel.async(() -> coFilter
-                ? vuongMacToolRepository.countGroupByKieuFiltered(hopDongId, nhaThauId, tinhThanhId, resolvedDoiTuong.id(), khuVucId, giaiDoanLoc, loaiId)
+                ? vuongMacToolRepository.countGroupByKieuFiltered(hopDongId, nhaThauId, tinhThanhId, resolvedDoiTuong.id(), khuVucId, giaiDoanLoc, loaiId, canBoId, ngayTaoFrom, ngayTaoTo)
                 : vuongMacToolRepository.countGroupByKieu());
         var fSearch = coDanhSach
                 ? parallel.async(() -> vuongMacToolRepository.search(ResolveSupport.likePattern(query), nhaThauId, hopDongId,
-                        resolvedDoiTuong.id(), tinhThanhId, khuVucId, giaiDoanLoc, trangThaiLoc, kieuLoc, moOnly, loaiId, pageable))
+                        resolvedDoiTuong.id(), tinhThanhId, khuVucId, giaiDoanLoc, trangThaiLoc, kieuLoc, moOnly, loaiId, canBoId, ngayTaoFrom, ngayTaoTo, pageable))
                 : null;
         var fRankHd = hopDongId == null
                 ? parallel.async(() -> vuongMacToolRepository.rankHopDongByOpenCount(PageRequest.of(0, top), hopDongId, nhaThauId, tinhThanhId,
-                        resolvedDoiTuong.id(), khuVucId, giaiDoanLoc, kieuLoc, loaiId).stream()
+                        resolvedDoiTuong.id(), khuVucId, giaiDoanLoc, kieuLoc, loaiId, canBoId, ngayTaoFrom, ngayTaoTo).stream()
                         .map(row -> RankedItemDto.builder().label(row.getLabel()).name(row.getName()).value(row.getValue()).build())
                         .toList())
                 : null;
         var fRankKv = khuVucId == null
                 ? parallel.async(() -> vuongMacToolRepository.rankKhuVucByOpenCount(PageRequest.of(0, top), hopDongId, nhaThauId, tinhThanhId,
-                        resolvedDoiTuong.id(), giaiDoanLoc, kieuLoc, loaiId).stream()
+                        resolvedDoiTuong.id(), giaiDoanLoc, kieuLoc, loaiId, canBoId, ngayTaoFrom, ngayTaoTo).stream()
                         .map(row -> RankedItemDto.builder().label(row.getLabel()).value(row.getValue()).build())
                         .toList())
                 : null;

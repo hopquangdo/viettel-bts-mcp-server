@@ -55,7 +55,8 @@ public class TramTonToolHandlerImpl implements TramTonToolHandler {
     @Override
     public TramTonQueryResponse query(String doiTuong, String hopDong, String nhaThau,
                                       String khuVuc, String tinhThanh, String loaiHopDong, String tab, LocalDate sinceDate, Integer quaHanNgay, Integer topIn,
-                                      Integer page, Integer pageSize, Integer soNgayThieuCapNhat) {
+                                      Integer page, Integer pageSize, Integer soNgayThieuCapNhat,
+                                      LocalDate fromDate, LocalDate toDate) {
         var f_resolvedNhaThau = parallel.async(() -> nhaThauComponent.resolve(nhaThau));
         var f_resolvedHopDong = parallel.async(() -> hopDongComponent.resolve(hopDong));
         var f_resolvedDoiTuong = parallel.async(() -> doiTuongComponent.resolve(doiTuong));
@@ -80,13 +81,16 @@ public class TramTonToolHandlerImpl implements TramTonToolHandler {
         int soNgay = soNgayThieuCapNhat != null && soNgayThieuCapNhat >= 0 ? soNgayThieuCapNhat
                 : sinceDate != null ? (int) ChronoUnit.DAYS.between(sinceDate, LocalDate.now()) : 7;
         int top = topIn != null ? Math.min(Math.max(topIn, 1), 20) : 5;
+        // fromDate/toDate lọc theo ngày hoàn thành thi công (mốc tính tuổi tồn) của nhóm chờ quyết toán/quá hạn; đảo lại nếu nhập ngược.
+        final LocalDate tuNgay = fromDate != null && toDate != null && fromDate.isAfter(toDate) ? toDate : fromDate;
+        final LocalDate denNgay = fromDate != null && toDate != null && fromDate.isAfter(toDate) ? fromDate : toDate;
 
         // Các khối độc lập chạy song song: độ trễ = khối chậm nhất thay vì tổng. Tổng quan phát riêng từng câu.
-        var fChoQt = parallel.async(() -> tramTonToolRepository.thongKeChoQuyetToanVaQuaHan(resolvedQuaHanNgay, khuVucId, tinhThanhId, nhaThauId, hopDongId, doiTuongId, loaiId));
+        var fChoQt = parallel.async(() -> tramTonToolRepository.thongKeChoQuyetToanVaQuaHan(resolvedQuaHanNgay, khuVucId, tinhThanhId, nhaThauId, hopDongId, doiTuongId, loaiId, tuNgay, denNgay));
         var fChuaPhapLy = parallel.async(() -> tramTonToolRepository.thongKeChuaPhapLy(khuVucId, tinhThanhId, nhaThauId, hopDongId, doiTuongId, loaiId));
         var fVuongMac = parallel.async(() -> tramTonToolRepository.thongKeVuongMacQuaNguong(resolvedQuaHanNgay, khuVucId, tinhThanhId, nhaThauId, hopDongId, doiTuongId, loaiId));
-        var fDanhSach = (nhaThauId != null || hopDongId != null || doiTuongId != null || khuVucId != null || tinhThanhId != null || loaiId != null || tabLoc != null)
-                ? parallel.async(() -> computeDanhSach(nhaThauId, hopDongId, khuVucId, tinhThanhId, doiTuongId, loaiId, tabLoc, resolvedQuaHanNgay, page, pageSize)) : null;
+        var fDanhSach = (nhaThauId != null || hopDongId != null || doiTuongId != null || khuVucId != null || tinhThanhId != null || loaiId != null || tabLoc != null || tuNgay != null || denNgay != null)
+                ? parallel.async(() -> computeDanhSach(nhaThauId, hopDongId, khuVucId, tinhThanhId, doiTuongId, loaiId, tabLoc, resolvedQuaHanNgay, tuNgay, denNgay, page, pageSize)) : null;
         var fThieuCapNhat = parallel.async(() -> computeThieuCapNhat(soNgay, nhaThauId, hopDongId, khuVucId, tinhThanhId, doiTuongId, loaiId));
         var fBatThuong = parallel.async(() -> computeSanLuongBatThuong(nhaThauId, hopDongId, khuVucId, tinhThanhId, doiTuongId, loaiId));
         boolean rankDisabled = khuVucId != null || doiTuongComponent.laCuThe(resolvedDoiTuong);
@@ -279,7 +283,8 @@ public class TramTonToolHandlerImpl implements TramTonToolHandler {
      * (không truyền tab thì gồm cả hai), chua_phap_ly và vuong_mac lấy từ tập riêng.
      */
     private PagedResult<TramTonToolItemDto> computeDanhSach(UUID nhaThauId, UUID hopDongId, UUID khuVucId, UUID tinhThanhId, UUID doiTuongId,
-                                                            UUID loaiId, String tab, int quaHanNgay, Integer page, Integer pageSize) {
+                                                            UUID loaiId, String tab, int quaHanNgay, LocalDate fromDate, LocalDate toDate,
+                                                            Integer page, Integer pageSize) {
         var pageable = PagingUtil.toPageRequest(page, pageSize, PagingUtil.DEFAULT_PAGE_SIZE, PagingUtil.MAX_PAGE_SIZE);
         Page<Object[]> result;
         String trangThai = "cho_quyet_toan";
@@ -294,7 +299,7 @@ public class TramTonToolHandlerImpl implements TramTonToolHandler {
             lyDo = "Vướng mắc đang mở quá " + quaHanNgay + " ngày";
         } else {
             String tabQt = "qua_han".equals(tab) || "cho_quyet_toan".equals(tab) ? tab : null;
-            result = tramTonToolRepository.search(nhaThauId, hopDongId, khuVucId, tinhThanhId, doiTuongId, loaiId, tabQt, quaHanNgay, pageable);
+            result = tramTonToolRepository.search(nhaThauId, hopDongId, khuVucId, tinhThanhId, doiTuongId, loaiId, tabQt, quaHanNgay, fromDate, toDate, pageable);
             if ("qua_han".equals(tab)) {
                 trangThai = "qua_han";
                 lyDo = "Quá hạn quyết toán";

@@ -64,7 +64,8 @@ public class PhanCongToolHandlerImpl implements PhanCongToolHandler {
     public PhanCongQueryResponse query(String vung, String nhaThau, String canBo,
                                        String query, String hopDong, String khuVuc, String tinhThanh, String doiTuong, String giaiDoan,
                                        Boolean lichSu, Integer topIn,
-                                       Integer page, Integer pageSize) {
+                                       Integer page, Integer pageSize,
+                                       java.time.LocalDate fromDate, java.time.LocalDate toDate) {
         var f_resolvedNhaThau = parallel.async(() -> nhaThauComponent.resolve(nhaThau));
         var f_resolvedHopDong = parallel.async(() -> hopDongComponent.resolve(hopDong));
         var f_tinhThanhId = parallel.async(() -> tinhComponent.resolveId(tinhThanh));
@@ -79,6 +80,12 @@ public class PhanCongToolHandlerImpl implements PhanCongToolHandler {
         var resolvedDoiTuong = McpParallel.get(f_resolvedDoiTuong);
         UUID doiTuongId = resolvedDoiTuong.id();
         String giaiDoanLoc = ResolveSupport.normalize(giaiDoan);
+        // fromDate/toDate lọc theo ngày tạo phân công (giờ VN, gồm cả toDate); đảo lại nếu nhập ngược.
+        java.time.LocalDate tuNgay = fromDate != null && toDate != null && fromDate.isAfter(toDate) ? toDate : fromDate;
+        java.time.LocalDate denNgay = fromDate != null && toDate != null && fromDate.isAfter(toDate) ? fromDate : toDate;
+        java.time.ZoneId zoneVn = java.time.ZoneId.of("Asia/Ho_Chi_Minh");
+        java.time.Instant ngayTaoFrom = tuNgay != null ? tuNgay.atStartOfDay(zoneVn).toInstant() : null;
+        java.time.Instant ngayTaoTo = denNgay != null ? denNgay.plusDays(1).atStartOfDay(zoneVn).toInstant() : null;
         Boolean lichSuLoc = Boolean.TRUE.equals(lichSu) ? Boolean.TRUE : null;
         String tenNhaThau = resolvedNhaThau.ten();
 
@@ -88,19 +95,19 @@ public class PhanCongToolHandlerImpl implements PhanCongToolHandler {
         int top = topIn != null ? Math.min(Math.max(topIn, 1), 20) : 5;
         var pageable = PagingUtil.toPageRequest(page, pageSize, PagingUtil.DEFAULT_PAGE_SIZE, PagingUtil.MAX_PAGE_SIZE);
         boolean coDanhSach = query != null || tenNhaThau != null || vung != null || tinhThanhId != null || doiTuongId != null || giaiDoanLoc != null
-                || lichSuLoc != null;
+                || lichSuLoc != null || ngayTaoFrom != null || ngayTaoTo != null;
 
         // Giai đoạn 1: các truy vấn độc lập chạy song song (độ trễ = câu chậm nhất thay vì tổng)
-        var fThongKe = parallel.async(() -> phanCongRepository.thongKe(vung, ResolveSupport.likePattern(tenNhaThau), hopDongId, khuVucId, tinhThanhId, doiTuongId, giaiDoanLoc));
+        var fThongKe = parallel.async(() -> phanCongRepository.thongKe(vung, ResolveSupport.likePattern(tenNhaThau), hopDongId, khuVucId, tinhThanhId, doiTuongId, giaiDoanLoc, ngayTaoFrom, ngayTaoTo));
         var fDoiTuong = parallel.async(() -> phanCongToolRepository.tongQuanTheoDoiTuong(hopDongId, nhaThauId, khuVucId, tinhThanhId, doiTuongId));
         var fKhuVucCat = parallel.async(this::khuVucTenById);
         var fTinhCat = parallel.async(this::tinhThanhTenById);
         var fSearch = coDanhSach
                 ? parallel.async(() -> phanCongRepository.search(ResolveSupport.likePattern(query), vung,
-                        ResolveSupport.likePattern(tenNhaThau), tinhThanhId, hopDongId, khuVucId, doiTuongId, giaiDoanLoc, lichSuLoc, pageable))
+                        ResolveSupport.likePattern(tenNhaThau), tinhThanhId, hopDongId, khuVucId, doiTuongId, giaiDoanLoc, lichSuLoc, ngayTaoFrom, ngayTaoTo, pageable))
                 : null;
         var fCanBo = resolvedCanBo.id() != null
-                ? parallel.async(() -> phanCongRepository.findActiveForContractor(resolvedCanBo.id(), resolvedCanBo.ten(), resolvedCanBo.username()))
+                ? parallel.async(() -> phanCongRepository.findActiveForContractor(resolvedCanBo.id(), resolvedCanBo.ten(), resolvedCanBo.username(), ngayTaoFrom, ngayTaoTo))
                 : null;
         var fChua = parallel.async(() -> phanCongToolRepository.findChuaPhanCong(hopDongId, khuVucId, tinhThanhId, doiTuongId, pageable));
         // canBo là tài khoản nhà thầu/cán bộ được lọc → cùng cấp với xếp hạng nhà thầu nên bỏ bảng, như khi lọc nhaThau

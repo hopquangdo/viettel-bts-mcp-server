@@ -42,7 +42,8 @@ public class HoSoDoiTuongToolHandlerImpl implements HoSoDoiTuongToolHandler {
 
     @Override
     public HoSoDoiTuongQueryResponse query(String doiTuong, String hopDong, String nhaThau, String khuVuc, String tinhThanh,
-                                       String trangThaiHopDong, Boolean coNhomUuTien, Integer page, Integer pageSize) {
+                                       String trangThaiHopDong, Boolean coNhomUuTien,
+                                       LocalDate fromDate, LocalDate toDate, Integer page, Integer pageSize) {
         var f_resolvedHopDong = parallel.async(() -> hopDongComponent.resolve(hopDong));
         var f_resolvedDoiTuong = parallel.async(() -> doiTuongComponent.resolve(doiTuong));
         var f_nhaThau = parallel.async(() -> nhaThauComponent.resolve(nhaThau));
@@ -56,12 +57,16 @@ public class HoSoDoiTuongToolHandlerImpl implements HoSoDoiTuongToolHandler {
         UUID doiTuongId = resolvedDoiTuong.id();
         Loc loc = new Loc(McpParallel.get(f_nhaThau).id(), khuVucId, McpParallel.get(f_tinh), McpParallel.get(f_trangThai), coNhomUuTien);
 
+        // Đảo lại nếu nhập ngược khoảng ngày
+        LocalDate tuNgay = fromDate != null && toDate != null && fromDate.isAfter(toDate) ? toDate : fromDate;
+        LocalDate denNgay = fromDate != null && toDate != null && fromDate.isAfter(toDate) ? fromDate : toDate;
+
         // 4 khối độc lập chạy song song
         boolean coLoc = hopDongId != null || loc.coGiaTri();
         var fTongQuan = coLoc ? parallel.async(() -> computeTongQuan(hopDongId, loc)) : null;
         var fThuocTinh = doiTuongId != null ? parallel.async(() -> computeThuocTinh(doiTuongId, hopDongId)) : null;
         var fChuaKhaoSat = coLoc ? parallel.async(() -> computeChuaKhaoSat(hopDongId, loc, page, pageSize)) : null;
-        var fKhaoSatXong = parallel.async(() -> computeKhaoSatXongChuaCoSanLuong(hopDongId, loc, page, pageSize));
+        var fKhaoSatXong = parallel.async(() -> computeKhaoSatXongChuaCoSanLuong(hopDongId, loc, tuNgay, denNgay, page, pageSize));
 
         HoSoDoiTuongTongQuanDto tongQuan = fTongQuan != null ? McpParallel.get(fTongQuan) : null;
         HoSoDoiTuongThuocTinhDto thuocTinh = fThuocTinh != null ? McpParallel.get(fThuocTinh) : null;
@@ -129,10 +134,11 @@ public class HoSoDoiTuongToolHandlerImpl implements HoSoDoiTuongToolHandler {
     }
 
     private PagedResult<HoSoDoiTuongKhaoSatXongChuaCoSanLuongItem> computeKhaoSatXongChuaCoSanLuong(UUID hopDongId, Loc loc,
+                                                                                                    LocalDate fromDate, LocalDate toDate,
                                                                                                     Integer page, Integer pageSize) {
         LocalDate today = LocalDate.now();
         Page<KhaoSatXongChuaCoSanLuongProjection> resultPage = repository.khaoSatXongChuaCoSanLuong(
-                hopDongId, loc.nhaThauId(), loc.khuVucId(), loc.tinhThanhId(), loc.trangThaiIds(), loc.coNhomUuTien(), PagingUtil.toPageRequest(page, pageSize, PagingUtil.DEFAULT_PAGE_SIZE, PagingUtil.MAX_PAGE_SIZE));
+                hopDongId, loc.nhaThauId(), loc.khuVucId(), loc.tinhThanhId(), loc.trangThaiIds(), loc.coNhomUuTien(), fromDate, toDate, PagingUtil.toPageRequest(page, pageSize, PagingUtil.DEFAULT_PAGE_SIZE, PagingUtil.MAX_PAGE_SIZE));
         List<HoSoDoiTuongKhaoSatXongChuaCoSanLuongItem> items = resultPage.map(row -> {
             HoSoDoiTuongKhaoSatXongChuaCoSanLuongItem item = new HoSoDoiTuongKhaoSatXongChuaCoSanLuongItem();
             item.setDoiTuong(DoiTuongInfo.of(row.getMaDoiTuong(), row.getTenDoiTuong()));

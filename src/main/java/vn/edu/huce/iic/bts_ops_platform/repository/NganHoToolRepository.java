@@ -41,6 +41,11 @@ public interface NganHoToolRepository extends JpaRepository<HopDong, UUID> {
                 FROM hop_dong h
                 WHERE h.ngay_xoa IS NULL AND h.hoat_dong = TRUE
                   AND (CAST(:loaiHopDongId AS uuid) IS NULL OR h.loai_hop_dong_id = CAST(:loaiHopDongId AS uuid))
+                  AND ((CAST(:khuVucId AS uuid) IS NULL AND CAST(:tinhThanhId AS uuid) IS NULL)
+                       OR EXISTS (SELECT 1 FROM hop_dong_doi_tuong g
+                                  WHERE g.hop_dong_id = h.id AND g.ngay_xoa IS NULL AND g.hoat_dong = TRUE
+                                    AND (CAST(:khuVucId AS uuid) IS NULL OR g.khu_vuc_id = CAST(:khuVucId AS uuid))
+                                    AND (CAST(:tinhThanhId AS uuid) IS NULL OR g.tinh_thanh_id = CAST(:tinhThanhId AS uuid))))
                   AND (CAST(:keyword AS text) IS NULL OR CAST(:keyword AS text) = ''
                        OR LOWER(COALESCE(h.ma_hop_dong, '')) LIKE CAST(:keyword AS text) ESCAPE '\\'
                        OR LOWER(COALESCE(h.ma, '')) LIKE CAST(:keyword AS text) ESCAPE '\\'
@@ -144,7 +149,9 @@ public interface NganHoToolRepository extends JpaRepository<HopDong, UUID> {
                                             @Param("xayMoiConLaiLoaiId") UUID xayMoiConLaiLoaiId,
                                             @Param("heSoMacDinh") BigDecimal heSoMacDinh,
                                             @Param("nguongCanhBao") BigDecimal nguongCanhBao,
-                                            @Param("loaiHopDongId") UUID loaiHopDongId);
+                                            @Param("loaiHopDongId") UUID loaiHopDongId,
+                                            @Param("khuVucId") UUID khuVucId,
+                                            @Param("tinhThanhId") UUID tinhThanhId);
 
     @Query(value = """
             SELECT h.loai_hop_dong_id, COUNT(*)
@@ -158,10 +165,17 @@ public interface NganHoToolRepository extends JpaRepository<HopDong, UUID> {
                               WHERE ht.hop_dong_id = h.id AND ht.ngay_xoa IS NULL
                                 AND LOWER(ht.gia_tri) LIKE CAST(:keyword AS text) ESCAPE '\\'))
               AND h.loai_hop_dong_id IS NOT NULL
+              AND ((CAST(:khuVucId AS uuid) IS NULL AND CAST(:tinhThanhId AS uuid) IS NULL)
+                   OR EXISTS (SELECT 1 FROM hop_dong_doi_tuong g
+                              WHERE g.hop_dong_id = h.id AND g.ngay_xoa IS NULL AND g.hoat_dong = TRUE
+                                AND (CAST(:khuVucId AS uuid) IS NULL OR g.khu_vuc_id = CAST(:khuVucId AS uuid))
+                                AND (CAST(:tinhThanhId AS uuid) IS NULL OR g.tinh_thanh_id = CAST(:tinhThanhId AS uuid))))
               AND (CAST(:loaiHopDongId AS uuid) IS NULL OR h.loai_hop_dong_id = CAST(:loaiHopDongId AS uuid))
             GROUP BY h.loai_hop_dong_id
             """, nativeQuery = true)
-    List<Object[]> tongQuanTheoLoai(@Param("keyword") String keyword, @Param("loaiHopDongId") UUID loaiHopDongId);
+    List<Object[]> tongQuanTheoLoai(@Param("keyword") String keyword, @Param("loaiHopDongId") UUID loaiHopDongId,
+                                            @Param("khuVucId") UUID khuVucId,
+                                            @Param("tinhThanhId") UUID tinhThanhId);
 
     /**
      * Danh sách hợp đồng theo trạng thái ngân sách, cùng tập và cùng cách tính với {@link #tongQuanAggregate} (khớp REST volume/hop-dong/danh-sach).
@@ -194,6 +208,8 @@ public interface NganHoToolRepository extends JpaRepository<HopDong, UUID> {
                                             @Param("nguongCanhBao") BigDecimal nguongCanhBao,
                                             @Param("loaiHopDongId") UUID loaiHopDongId,
                                             @Param("statusFilter") String statusFilter,
+                                            @Param("khuVucId") UUID khuVucId,
+                                            @Param("tinhThanhId") UUID tinhThanhId,
                                             org.springframework.data.domain.Pageable pageable);
 
     /**

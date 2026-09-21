@@ -7,5 +7,6 @@ public interface HopDongToolHandler {
 
     HopDongQueryResponse query(String doiTuong, String hopDong, String nhaThau,
                                String khuVuc, String tinhThanh, String loaiHopDong, String kieuHopDong, String query, Integer page, Integer pageSize,
-                               Double nguongChamTienDo, Double nguongXanh, Double nguongVang);
+                               Double nguongChamTienDo, Double nguongXanh, Double nguongVang,
+                               Integer top, java.time.LocalDate fromDate, java.time.LocalDate toDate, String loaiNgay);
 }

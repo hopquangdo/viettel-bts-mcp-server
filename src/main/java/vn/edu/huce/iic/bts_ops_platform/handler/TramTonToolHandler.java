@@ -8,5 +8,6 @@ public interface TramTonToolHandler {
 
     TramTonQueryResponse query(String doiTuong, String hopDong, String nhaThau,
                                String khuVuc, String tinhThanh, String loaiHopDong, String tab, LocalDate sinceDate, Integer quaHanNgay, Integer top,
-                               Integer page, Integer pageSize, Integer soNgayThieuCapNhat);
+                               Integer page, Integer pageSize, Integer soNgayThieuCapNhat,
+                               LocalDate fromDate, LocalDate toDate);
 }
