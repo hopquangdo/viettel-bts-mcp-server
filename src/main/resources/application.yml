@@ -20,6 +20,7 @@ spring:
     redis:
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
   ai:
     mcp:
       server:
@@ -33,6 +34,19 @@ server:
 app:
   mcp:
     api-key: ${APP_MCP_API_KEY:}
+  cache:
+    # RedisCacheService (CanBoComponent, NhaThauResolver...). Đặt APP_CACHE_ENABLED=false để tắt cache.
+    enabled: ${APP_CACHE_ENABLED:true}
+    key-prefix: ${APP_CACHE_KEY_PREFIX:bts-ops}
+    contractor-scope-ttl-seconds: ${APP_CACHE_CONTRACTOR_SCOPE_TTL:60}
+    phanquyen-authority-ttl-seconds: ${APP_CACHE_PHANQUYEN_AUTHORITY_TTL:900}
+    sanluong-tonghop-ttl-seconds: ${APP_CACHE_SANLUONG_TONGHOP_TTL:86400}
+    sanluong-doi-tuong-row-ttl-seconds: ${APP_CACHE_SANLUONG_DOI_TUONG_ROW_TTL:86400}
+    name-lookup-ttl-seconds: ${APP_CACHE_NAME_LOOKUP_TTL:300}
+    volume-batch-ttl-seconds: ${APP_CACHE_VOLUME_BATCH_TTL:86400}
+    hop-dong-doi-tuong-snapshot-ttl-seconds: ${APP_CACHE_HOPDONG_DOITUONG_SNAPSHOT_TTL:86400}
+    vuong-mac-row-ttl-seconds: ${APP_CACHE_VUONG_MAC_ROW_TTL:86400}
+    hop-dong-doi-tuong-report-ttl-seconds: ${APP_CACHE_HOPDONG_DOITUONG_REPORT_TTL:86400}
   jwt:
     secret: ${JWT_SECRET}
     access-token-expiration-ms: ${JWT_ACCESS_EXPIRATION_MS:900000}
