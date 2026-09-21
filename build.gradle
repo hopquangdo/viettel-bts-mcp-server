@@ -51,16 +51,6 @@ dependencies {
     annotationProcessor 'org.mapstruct:mapstruct-processor:1.6.3'
 }
 
-sourceSets {
-    main {
-        // Transitional extraction seam. These sources move into common-security/mcp-server in phase 3.
-        java {
-            srcDirs = ['src/main/java', '../business-api/src/main/java']
-            exclude '**/BtsOpsPlatformApplication.java'
-        }
-    }
-}
-
 tasks.named('bootJar') {
     archiveFileName = 'mcp-server.jar'
 }
