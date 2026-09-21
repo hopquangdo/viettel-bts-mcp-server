@@ -9,6 +9,7 @@ import vn.edu.huce.iic.bts_ops_platform.dto.bienban.BienBanTheoTrangThaiRow;
 import vn.edu.huce.iic.bts_ops_platform.dto.bienban.DemNhomRow;
 import vn.edu.huce.iic.bts_ops_platform.modules.core.hopdong.bienban.entity.BienBan;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
@@ -102,6 +103,12 @@ public interface BienBanToolRepository extends JpaRepository<BienBan, UUID> {
             FROM bien_ban b
             INNER JOIN hop_dong h ON h.id = b.hop_dong_id AND h.ngay_xoa IS NULL AND h.hoat_dong = TRUE
             WHERE b.ngay_xoa IS NULL
+              AND (CAST(:doiTuongId AS uuid) IS NULL OR EXISTS (
+                    SELECT 1 FROM hop_dong_doi_tuong d
+                    WHERE d.hop_dong_id = h.id AND d.ngay_xoa IS NULL
+                      AND (d.doi_tuong_quan_ly_id = CAST(:doiTuongId AS uuid) OR d.id = CAST(:doiTuongId AS uuid))))
+              AND (CAST(:fromDate AS date) IS NULL OR b.ngay_lap >= CAST(:fromDate AS date))
+              AND (CAST(:toDate AS date) IS NULL OR b.ngay_lap <= CAST(:toDate AS date))
               AND (CAST(:hopDongId AS uuid) IS NULL OR h.id = CAST(:hopDongId AS uuid))
               AND (CAST(:khuVucId AS uuid) IS NULL OR EXISTS (
                     SELECT 1 FROM hop_dong_doi_tuong d
@@ -115,7 +122,8 @@ public interface BienBanToolRepository extends JpaRepository<BienBan, UUID> {
             GROUP BY b.trang_thai
             """, nativeQuery = true)
     List<DemNhomRow> countGroupByTrangThai(@Param("khuVucId") UUID khuVucId, @Param("tinhThanhId") UUID tinhThanhId, @Param("hopDongId") UUID hopDongId,
-                                           @Param("nhaThauId") UUID nhaThauId);
+                                           @Param("nhaThauId") UUID nhaThauId, @Param("doiTuongId") UUID doiTuongId,
+            @Param("fromDate") LocalDate fromDate, @Param("toDate") LocalDate toDate);
 
     /** Đếm biên bản theo loại (loai_bien_ban). Chỉ lọc soft-delete, không lọc hoat_dong — xem lý do ở countGroupByTrangThai. */
     @Query(value = """
@@ -123,6 +131,12 @@ public interface BienBanToolRepository extends JpaRepository<BienBan, UUID> {
             FROM bien_ban b
             INNER JOIN hop_dong h ON h.id = b.hop_dong_id AND h.ngay_xoa IS NULL AND h.hoat_dong = TRUE
             WHERE b.ngay_xoa IS NULL
+              AND (CAST(:doiTuongId AS uuid) IS NULL OR EXISTS (
+                    SELECT 1 FROM hop_dong_doi_tuong d
+                    WHERE d.hop_dong_id = h.id AND d.ngay_xoa IS NULL
+                      AND (d.doi_tuong_quan_ly_id = CAST(:doiTuongId AS uuid) OR d.id = CAST(:doiTuongId AS uuid))))
+              AND (CAST(:fromDate AS date) IS NULL OR b.ngay_lap >= CAST(:fromDate AS date))
+              AND (CAST(:toDate AS date) IS NULL OR b.ngay_lap <= CAST(:toDate AS date))
               AND (CAST(:hopDongId AS uuid) IS NULL OR h.id = CAST(:hopDongId AS uuid))
               AND (CAST(:khuVucId AS uuid) IS NULL OR EXISTS (
                     SELECT 1 FROM hop_dong_doi_tuong d
@@ -136,7 +150,8 @@ public interface BienBanToolRepository extends JpaRepository<BienBan, UUID> {
             GROUP BY b.loai_bien_ban
             """, nativeQuery = true)
     List<DemNhomRow> countGroupByLoai(@Param("khuVucId") UUID khuVucId, @Param("tinhThanhId") UUID tinhThanhId, @Param("hopDongId") UUID hopDongId,
-                                      @Param("nhaThauId") UUID nhaThauId);
+                                      @Param("nhaThauId") UUID nhaThauId, @Param("doiTuongId") UUID doiTuongId,
+            @Param("fromDate") LocalDate fromDate, @Param("toDate") LocalDate toDate);
 
     /** Danh sách biên bản theo trạng thái (lọc trangThai nếu truyền: cho_duyet | da_duyet | tu_choi). */
     @Query(value = """
@@ -147,6 +162,12 @@ public interface BienBanToolRepository extends JpaRepository<BienBan, UUID> {
             FROM bien_ban b
             INNER JOIN hop_dong h ON h.id = b.hop_dong_id AND h.ngay_xoa IS NULL AND h.hoat_dong = TRUE
             WHERE b.ngay_xoa IS NULL
+              AND (CAST(:doiTuongId AS uuid) IS NULL OR EXISTS (
+                    SELECT 1 FROM hop_dong_doi_tuong d
+                    WHERE d.hop_dong_id = h.id AND d.ngay_xoa IS NULL
+                      AND (d.doi_tuong_quan_ly_id = CAST(:doiTuongId AS uuid) OR d.id = CAST(:doiTuongId AS uuid))))
+              AND (CAST(:fromDate AS date) IS NULL OR b.ngay_lap >= CAST(:fromDate AS date))
+              AND (CAST(:toDate AS date) IS NULL OR b.ngay_lap <= CAST(:toDate AS date))
               AND (CAST(:trangThai AS text) IS NULL OR b.trang_thai = :trangThai)
               AND (CAST(:hopDongId AS uuid) IS NULL OR h.id = CAST(:hopDongId AS uuid))
               AND (CAST(:khuVucId AS uuid) IS NULL OR EXISTS (
@@ -165,6 +186,12 @@ public interface BienBanToolRepository extends JpaRepository<BienBan, UUID> {
                 FROM bien_ban b
                 INNER JOIN hop_dong h ON h.id = b.hop_dong_id AND h.ngay_xoa IS NULL AND h.hoat_dong = TRUE
                 WHERE b.ngay_xoa IS NULL
+              AND (CAST(:doiTuongId AS uuid) IS NULL OR EXISTS (
+                    SELECT 1 FROM hop_dong_doi_tuong d
+                    WHERE d.hop_dong_id = h.id AND d.ngay_xoa IS NULL
+                      AND (d.doi_tuong_quan_ly_id = CAST(:doiTuongId AS uuid) OR d.id = CAST(:doiTuongId AS uuid))))
+              AND (CAST(:fromDate AS date) IS NULL OR b.ngay_lap >= CAST(:fromDate AS date))
+              AND (CAST(:toDate AS date) IS NULL OR b.ngay_lap <= CAST(:toDate AS date))
                   AND (CAST(:trangThai AS text) IS NULL OR b.trang_thai = :trangThai)
                   AND (CAST(:hopDongId AS uuid) IS NULL OR h.id = CAST(:hopDongId AS uuid))
                   AND (CAST(:khuVucId AS uuid) IS NULL OR EXISTS (
@@ -180,7 +207,8 @@ public interface BienBanToolRepository extends JpaRepository<BienBan, UUID> {
     Page<BienBanTheoTrangThaiRow> findTheoTrangThai(@Param("trangThai") String trangThai,
                                                                     @Param("khuVucId") UUID khuVucId, @Param("tinhThanhId") UUID tinhThanhId,
                                                                     @Param("hopDongId") UUID hopDongId,
-                                                                    @Param("nhaThauId") UUID nhaThauId, Pageable pageable);
+                                                                    @Param("nhaThauId") UUID nhaThauId, @Param("doiTuongId") UUID doiTuongId,
+            @Param("fromDate") LocalDate fromDate, @Param("toDate") LocalDate toDate, Pageable pageable);
 
     /**
      * Checklist bắt buộc của NHIỀU hợp đồng trong 1 câu (thay cho việc gọi từng hợp đồng).

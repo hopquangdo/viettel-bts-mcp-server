@@ -257,10 +257,13 @@ public class ToolTestController {
             @RequestParam(required = false) String maHopDong,
             @RequestParam(required = false) String nhaThau,
             @RequestParam(required = false) String trangThai,
+            @RequestParam(required = false) String maDoiTuong,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate,
             @RequestParam(required = false) Integer page,
             @RequestParam(required = false) Integer pageSize) {
         BienBanQueryResponse result = bienBanToolHandler.query(
-                khuVuc, tinhThanh, maHopDong, nhaThau, trangThai, page, pageSize);
+                khuVuc, tinhThanh, maHopDong, nhaThau, trangThai, maDoiTuong, fromDate, toDate, page, pageSize);
         return ApiResponse.<BienBanQueryResponse>build().withData(result).toEntity();
     }
 

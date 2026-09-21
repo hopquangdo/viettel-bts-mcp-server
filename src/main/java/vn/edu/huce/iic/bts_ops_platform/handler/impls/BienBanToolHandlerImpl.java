@@ -16,6 +16,7 @@ import vn.edu.huce.iic.bts_ops_platform.dto.nhathau.NhaThauInfo;
 import vn.edu.huce.iic.bts_ops_platform.handler.BienBanToolHandler;
 import vn.edu.huce.iic.bts_ops_platform.repository.BienBanToolRepository;
 import vn.edu.huce.iic.bts_ops_platform.components.HopDongComponent;
+import vn.edu.huce.iic.bts_ops_platform.components.DoiTuongComponent;
 import vn.edu.huce.iic.bts_ops_platform.components.KhuVucComponent;
 import vn.edu.huce.iic.bts_ops_platform.components.NhaThauComponent;
 import vn.edu.huce.iic.bts_ops_platform.components.TinhComponent;
@@ -24,6 +25,7 @@ import vn.edu.huce.iic.bts_ops_platform.support.McpParallel;
 import vn.edu.huce.iic.bts_ops_platform.support.PagingUtil;
 import vn.edu.huce.iic.bts_ops_platform.dto.common.PagedResult;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -41,21 +43,27 @@ public class BienBanToolHandlerImpl implements BienBanToolHandler {
     private final BienBanToolRepository bienBanToolRepository;
     private final HopDongComponent hopDongComponent;
     private final KhuVucComponent khuVucComponent;
+    private final DoiTuongComponent doiTuongComponent;
     private final NhaThauComponent nhaThauComponent;
     private final TinhComponent tinhComponent;
     private final McpParallel parallel;
 
     @Override
     public BienBanQueryResponse query(String khuVuc, String tinhThanh, String hopDong, String nhaThau, String trangThai,
+                                      String doiTuong, LocalDate fromDate, LocalDate toDate,
                                       Integer page, Integer pageSize) {
         var f_resolvedNhaThau = parallel.async(() -> nhaThauComponent.resolve(nhaThau));
         var f_resolvedHopDong = parallel.async(() -> hopDongComponent.resolve(hopDong));
         var f_tinhThanhId = parallel.async(() -> tinhComponent.resolveId(tinhThanh));
+        var f_resolvedDoiTuong = parallel.async(() -> doiTuongComponent.resolve(doiTuong));
         KhuVucInfo resolvedKhuVuc = khuVucComponent.resolveInScope(khuVuc);
         // các tra cứu id chạy song song (mỗi tra cứu 1-2 lần khứ hồi tới DB nếu chưa có trong bộ nhớ đệm)
         NhaThauInfo resolvedNhaThau = McpParallel.get(f_resolvedNhaThau);
         HopDongInfo resolvedHopDong = McpParallel.get(f_resolvedHopDong);
         UUID tinhThanhId = McpParallel.get(f_tinhThanhId);
+        UUID doiTuongId = McpParallel.get(f_resolvedDoiTuong).id();
+        final LocalDate from = fromDate != null && toDate != null && fromDate.isAfter(toDate) ? toDate : fromDate;
+        final LocalDate to = fromDate != null && toDate != null && fromDate.isAfter(toDate) ? fromDate : toDate;
 
         UUID khuVucId = resolvedKhuVuc.id();
         UUID hopDongId = resolvedHopDong.id();
@@ -63,7 +71,7 @@ public class BienBanToolHandlerImpl implements BienBanToolHandler {
         var pageable = PagingUtil.toPageRequest(page, pageSize, PagingUtil.DEFAULT_PAGE_SIZE, PagingUtil.MAX_PAGE_SIZE);
 
         // 4 khối độc lập chạy song song: độ trễ = khối chậm nhất thay vì tổng
-        var fTongQuan = parallel.async(() -> computeTongQuan(khuVucId, tinhThanhId, hopDongId, nhaThauId));
+        var fTongQuan = parallel.async(() -> computeTongQuan(khuVucId, tinhThanhId, hopDongId, nhaThauId, doiTuongId, from, to));
         var fThieuKhaoSat = parallel.async(() -> {
             Page<Object[]> thieuKhaoSatPage = bienBanToolRepository.findTramThieuKhaoSat(null, khuVucId, tinhThanhId, nhaThauId, pageable);
             return PagedResult.of(thieuKhaoSatPage.getContent().stream()
@@ -72,7 +80,7 @@ public class BienBanToolHandlerImpl implements BienBanToolHandler {
         });
         var fThieuHoSo = parallel.async(() -> computeThieuHoSo(hopDongId, nhaThauId, page, pageSize));
         var fTheoTrangThai = parallel.async(() -> computeTheoTrangThai(
-                normalizeTrangThai(trangThai), khuVucId, tinhThanhId, hopDongId, nhaThauId, page, pageSize));
+                normalizeTrangThai(trangThai), khuVucId, tinhThanhId, hopDongId, nhaThauId, doiTuongId, from, to, page, pageSize));
 
         BienBanTongQuanToolItem tongQuan = McpParallel.get(fTongQuan);
         PagedResult<BienBanThieuKhaoSatToolItem> thieuKhaoSat = McpParallel.get(fThieuKhaoSat);
@@ -109,12 +117,13 @@ public class BienBanToolHandlerImpl implements BienBanToolHandler {
         };
     }
 
-    private BienBanTongQuanToolItem computeTongQuan(UUID khuVucId, UUID tinhThanhId, UUID hopDongId, UUID nhaThauId) {
+    private BienBanTongQuanToolItem computeTongQuan(UUID khuVucId, UUID tinhThanhId, UUID hopDongId, UUID nhaThauId,
+                                                  UUID doiTuongId, LocalDate from, LocalDate to) {
         long choDuyet = 0;
         long daDuyet = 0;
         long tuChoi = 0;
         long total = 0;
-        for (DemNhomRow row : bienBanToolRepository.countGroupByTrangThai(khuVucId, tinhThanhId, hopDongId, nhaThauId)) {
+        for (DemNhomRow row : bienBanToolRepository.countGroupByTrangThai(khuVucId, tinhThanhId, hopDongId, nhaThauId, doiTuongId, from, to)) {
             long count = row.getSoLuong();
             total += count;
             switch (row.getNhom() == null ? "" : row.getNhom()) {
@@ -130,7 +139,7 @@ public class BienBanToolHandlerImpl implements BienBanToolHandler {
                 "BAO_CAO_KHAO_SAT", "BAN_GIAO_MAT_BANG", "YEU_CAU_VAT_TU", "NHAN_VAT_TU")) {
             countsByLoai.put(StatusLabels.loaiBienBan(type), 0L);
         }
-        for (DemNhomRow row : bienBanToolRepository.countGroupByLoai(khuVucId, tinhThanhId, hopDongId, nhaThauId)) {
+        for (DemNhomRow row : bienBanToolRepository.countGroupByLoai(khuVucId, tinhThanhId, hopDongId, nhaThauId, doiTuongId, from, to)) {
             countsByLoai.put(StatusLabels.loaiBienBan(row.getNhom()), row.getSoLuong());
         }
 
@@ -145,9 +154,10 @@ public class BienBanToolHandlerImpl implements BienBanToolHandler {
 
     private PagedResult<BienBanTheoTrangThaiToolItem> computeTheoTrangThai(String trangThai, UUID khuVucId, UUID tinhThanhId,
                                                                             UUID hopDongId, UUID nhaThauId,
+                                                                            UUID doiTuongId, LocalDate from, LocalDate to,
                                                                             Integer page, Integer pageSize) {
         Page<BienBanTheoTrangThaiRow> resultPage = bienBanToolRepository.findTheoTrangThai(trangThai, khuVucId, tinhThanhId, hopDongId,
-                nhaThauId, PagingUtil.toPageRequest(page, pageSize, PagingUtil.DEFAULT_PAGE_SIZE, PagingUtil.MAX_PAGE_SIZE));
+                nhaThauId, doiTuongId, from, to, PagingUtil.toPageRequest(page, pageSize, PagingUtil.DEFAULT_PAGE_SIZE, PagingUtil.MAX_PAGE_SIZE));
         List<BienBanTheoTrangThaiToolItem> result = new ArrayList<>();
         for (BienBanTheoTrangThaiRow row : resultPage) {
             BienBanTheoTrangThaiToolItem item = new BienBanTheoTrangThaiToolItem();

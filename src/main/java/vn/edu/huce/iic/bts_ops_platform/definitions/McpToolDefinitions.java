@@ -220,10 +220,13 @@ public class McpToolDefinitions {
             @ToolParam(description = "Tỉnh/thành cần lọc: ID, mã hoặc tên (ưu tiên truyền mã hoặc ID; tên mơ hồ sẽ báo lỗi kèm danh sách ứng viên)", required = false) String tinhThanh,
             @ToolParam(description = "Hợp đồng cần lọc: ID, mã hoặc tên (ưu tiên truyền mã hoặc ID; tên mơ hồ sẽ báo lỗi kèm danh sách ứng viên)", required = false) String hopDong,
             @ToolParam(description = "Nhà thầu cần lọc: ID, mã hoặc tên (ưu tiên truyền mã hoặc ID; tên mơ hồ sẽ báo lỗi kèm danh sách ứng viên)", required = false) String nhaThau,
-                        @ToolParam(description = "Lọc theo trạng thái biên bản: cho_duyet | da_duyet | tu_choi", required = false) String trangThai,
+                        @ToolParam(description = "Lọc theo trạng thái biên bản: cho_duyet | da_duyet | tu_choi (tu_choi = bị từ chối / không đạt)", required = false) String trangThai,
+                        @ToolParam(description = "Đối tượng (trạm/tuyến) cần lọc: ID, mã hoặc tên, ví dụ THA1948. Biên bản lưu theo hợp đồng nên kết quả là biên bản của các hợp đồng chứa đối tượng này", required = false) String doiTuong,
+                        @ToolParam(description = "Chỉ tính biên bản có ngày lập từ ngày này (yyyy-MM-dd), áp cho tongQuan và theoTrangThai", required = false) LocalDate fromDate,
+                        @ToolParam(description = "Chỉ tính biên bản có ngày lập đến ngày này (yyyy-MM-dd, gồm cả ngày này), áp cho tongQuan và theoTrangThai", required = false) LocalDate toDate,
                         @ToolParam(description = "Số trang, bắt đầu từ 0", required = false) Integer page,
                         @ToolParam(description = "Số dòng mỗi trang, mặc định 3, tối đa 100", required = false) Integer pageSize) {
-                return bienBanToolHandler.query(khuVuc, tinhThanh, hopDong, nhaThau, trangThai, page, pageSize);
+                return bienBanToolHandler.query(khuVuc, tinhThanh, hopDong, nhaThau, trangThai, doiTuong, fromDate, toDate, page, pageSize);
     }
 
     // ------------------------------------------------------------------ nguonviec_tool
@@ -365,7 +368,7 @@ public class McpToolDefinitions {
                 .phanCong(phanCongToolHandler.query(null, null, null, null, null, null, null, null, null, null, null, null, null))
                 .tramTon(doiTuongTonToolHandler.query(null, null, null, null, null, null, null, null, null, null, null, null, null))
                 .vuongMac(vuongMacToolHandler.query(null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null))
-                .bienBan(bienBanToolHandler.query(null, null, null, null, null, null, null))
+                .bienBan(bienBanToolHandler.query(null, null, null, null, null, null, null, null, null, null))
                 .nguonViec(nguonViecToolHandler.query(null, null, null, null, null, null, null, null, null, null, null, null, null, null))
                 .build();
     }
