@@ -1,0 +1,10 @@
+package vn.edu.huce.iic.bts_ops_platform.mcp.handler;
+
+import vn.edu.huce.iic.bts_ops_platform.mcp.dto.nganho.NganHoQueryResponse;
+
+/** Contract logic cho tool AI module Ngân sách hợp đồng (Volume) — 1 method duy nhất. */
+public interface NganHoToolHandler {
+
+    NganHoQueryResponse query(String hopDong, String query, Double heSo, Double nguongCanhBao,
+                              String loaiHopDong, String statusFilter, String khuVuc, String tinhThanh, Integer page, Integer pageSize);
+}
