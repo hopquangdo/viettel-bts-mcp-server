@@ -8,6 +8,9 @@
 #
 # Image chỉ đẩy lên ghcr.io bằng GITHUB_TOKEN. Deploy = `kubectl set image` đúng tag sha-xxxxxxx vừa build; lỗi
 # rollout thì tự `rollout undo`. Lần đầu (chưa có Deployment) chạy scripts/apply.sh (repo viettel-vtk-deploy) trên server.
+# Sau khi mcp-server rollout xong: tự `kubectl rollout restart` deployment ai-assistant (biến
+# AI_ASSISTANT_DEPLOYMENT) để nó reconnect MCP và nạp lại tool mới -- ai-assistant chỉ discover tool
+# 1 lần lúc khởi động (cache trong process), không tự phát hiện tool đổi nếu không restart.
 
 name: CI/CD
 
@@ -30,6 +33,9 @@ permissions:
 env:
   REGISTRY: ghcr.io
   DEPLOYMENT: mcp-server
+  # ai-assistant chỉ nạp danh sách tool MCP 1 lần lúc khởi động (xem tool_registry trong repo
+  # ai-assistant) nên phải restart nó sau khi mcp-server đổi tool/mô tả tool để nó nạp lại.
+  AI_ASSISTANT_DEPLOYMENT: ai-assistant
 
 jobs:
   test:
@@ -110,12 +116,13 @@ jobs:
           NS: ${{ secrets.KUBE_NAMESPACE || 'viettel-prod' }}
           IMAGE: ${{ steps.img.outputs.ref }}
           DEPLOYMENT: ${{ env.DEPLOYMENT }}
+          AI_ASSISTANT_DEPLOYMENT: ${{ env.AI_ASSISTANT_DEPLOYMENT }}
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: ${{ secrets.SSH_PORT || 22 }}
-          envs: NS,IMAGE,DEPLOYMENT
+          envs: NS,IMAGE,DEPLOYMENT,AI_ASSISTANT_DEPLOYMENT
           script_stop: true
           script: |
             set -euo pipefail
@@ -146,3 +153,13 @@ jobs:
               exit 1
             fi
             echo "OK $DEPLOYMENT -> $IMAGE"
+
+            # ai-assistant chỉ nạp danh sách/mô tả tool MCP 1 lần lúc khởi động (cache trong tiến
+            # trình) nên phải rollout restart để nó reconnect và nạp lại sau khi mcp-server đổi.
+            if [ -n "${AI_ASSISTANT_DEPLOYMENT:-}" ] && $K -n "$NS" get deploy "$AI_ASSISTANT_DEPLOYMENT" >/dev/null 2>&1; then
+              echo "Restart $AI_ASSISTANT_DEPLOYMENT để nạp lại tool MCP mới..."
+              $K -n "$NS" rollout restart "deployment/$AI_ASSISTANT_DEPLOYMENT"
+              $K -n "$NS" rollout status "deployment/$AI_ASSISTANT_DEPLOYMENT" --timeout=300s || echo "Cảnh báo: $AI_ASSISTANT_DEPLOYMENT chưa ổn định sau restart"
+            else
+              echo "Bỏ qua restart $AI_ASSISTANT_DEPLOYMENT (không tìm thấy deployment trong namespace $NS)."
+            fi
