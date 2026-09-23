@@ -20,7 +20,6 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import vn.edu.huce.iic.bts_ops_platform.mcp.infrastructure.security.ApiAccessDeniedHandler;
 import vn.edu.huce.iic.bts_ops_platform.mcp.infrastructure.security.ApiAuthenticationEntryPoint;
-import vn.edu.huce.iic.bts_ops_platform.mcp.infrastructure.security.JwtAuthenticationFilter;
 import vn.edu.huce.iic.bts_ops_platform.mcp.infrastructure.security.McpApiKeyFilter;
 
 import java.util.ArrayList;
@@ -38,24 +37,18 @@ public class SecurityConfig {
     private final Environment environment;
     private final ApiAuthenticationEntryPoint apiAuthenticationEntryPoint;
     private final ApiAccessDeniedHandler apiAccessDeniedHandler;
-    private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final McpApiKeyFilter mcpApiKeyFilter;
 
     private static final String[] PUBLIC_ENDPOINTS = {
-            "/api/v1/xac-thuc/dang-nhap",
-            "/api/v1/xac-thuc/dang-ky",
-            "/api/v1/xac-thuc/lam-moi-token",
-
             "/v3/api-docs/**",
             "/swagger-ui/**",
             "/swagger-ui.html",
             "/error",
 
             "/actuator/health",
-            "/uploads/**",
 
-            // MCP tool server: bỏ qua JWT đăng nhập; McpApiKeyFilter bắt buộc X-API-Key (fail-closed) và mỗi lần gọi tool
-            // phải kèm token người dùng (McpUserContext).
+            // MCP tool server: không qua Spring Security thường; McpApiKeyFilter bắt buộc X-API-Key
+            // (fail-closed) và đọc danh tính người dùng từ header X-User-* (McpUserContext).
             "/mcp/**"
     };
 
@@ -65,7 +58,7 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                // SSE (SseEmitter) dùng async dispatch — request đầu đã xác thực JWT; dispatch tiếp theo không gửi lại Bearer.
+                // SSE (SseEmitter) dùng async dispatch — request đầu đã xác thực; dispatch tiếp theo không gửi lại header.
                 .securityContext(securityContext -> securityContext.requireExplicitSave(true))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
@@ -76,8 +69,7 @@ public class SecurityConfig {
                 .exceptionHandling(ex -> ex
                         .authenticationEntryPoint(apiAuthenticationEntryPoint)
                         .accessDeniedHandler(apiAccessDeniedHandler))
-                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
-                .addFilterBefore(mcpApiKeyFilter, JwtAuthenticationFilter.class);
+                .addFilterBefore(mcpApiKeyFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }

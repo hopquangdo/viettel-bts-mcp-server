@@ -24,4 +24,6 @@ public class HoSoDoiTuongThuocTinhDto {
     private String trangThaiVatTuB;
     private LocalDate ngayYeuCauVatTuB;
     private LocalDate ngayHoanThanhVatTuB;
+    /** Ngày ghi nhận sản lượng "done" đầu tiên — null nghĩa là chưa khởi công. */
+    private LocalDate ngayKhoiCong;
 }

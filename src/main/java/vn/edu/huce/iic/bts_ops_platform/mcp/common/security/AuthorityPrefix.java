@@ -6,7 +6,7 @@ public final class AuthorityPrefix {
     public static final String QUYEN = "QUYEN_";
     public static final String HAN = "HAN_";
 
-    /** Mã quyền hạn wildcard trong seed — cho phép mọi API có {@code @RequiresPermission}. */
+    /** Mã quyền hạn wildcard trong seed — đại diện cho quyền truy cập toàn bộ dữ liệu. */
     public static final String FULL_ACCESS = "FULL_ACCESS";
 
     private AuthorityPrefix() {

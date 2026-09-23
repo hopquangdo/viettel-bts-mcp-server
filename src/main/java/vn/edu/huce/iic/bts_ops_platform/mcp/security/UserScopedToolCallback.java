@@ -7,13 +7,13 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import vn.edu.huce.iic.bts_ops_platform.mcp.common.dto.AppException;
-import vn.edu.huce.iic.bts_ops_platform.mcp.infrastructure.security.JwtUserPrincipal;
+import vn.edu.huce.iic.bts_ops_platform.mcp.infrastructure.security.McpUserPrincipal;
 import vn.edu.huce.iic.bts_ops_platform.mcp.security.auth.AuthErrorCode;
 
 /**
- * Runs a tool as the end user identified by the MCP request, so {@code DataScopeService} and
- * {@code @RequiresPermission} see a real principal. Fail-closed: a call without a verified user is
- * rejected instead of running with full access.
+ * Runs a tool as the end user identified by the MCP request, so {@code DataScopeService} sees a
+ * real principal. Fail-closed: a call without a verified user is rejected instead of running with
+ * full access.
  */
 public class UserScopedToolCallback implements ToolCallback {
 
@@ -35,7 +35,7 @@ public class UserScopedToolCallback implements ToolCallback {
 
     @Override
     public String call(String toolInput, ToolContext toolContext) {
-        JwtUserPrincipal user = McpUserContext.currentUser(toolContext).orElseThrow(UserScopedToolCallback::unauthenticated);
+        McpUserPrincipal user = McpUserContext.currentUser(toolContext).orElseThrow(UserScopedToolCallback::unauthenticated);
 
         SecurityContext previous = SecurityContextHolder.getContext();
         SecurityContext scoped = SecurityContextHolder.createEmptyContext();

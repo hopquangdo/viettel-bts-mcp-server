@@ -6,7 +6,6 @@ import io.modelcontextprotocol.server.transport.WebMvcStreamableServerTransportP
 import org.springframework.ai.mcp.server.common.autoconfigure.properties.McpServerStreamableHttpProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.http.HttpHeaders;
 
 /**
  * Replaces Spring AI's auto-configured Streamable HTTP transport (it backs off when a bean of this
@@ -26,8 +25,7 @@ public class McpTransportConfig {
                 .mcpEndpoint(properties.getMcpEndpoint())
                 .keepAliveInterval(properties.getKeepAliveInterval())
                 .disallowDelete(properties.isDisallowDelete())
-                .contextExtractor(request ->
-                        userContext.fromAuthorizationHeader(request.headers().firstHeader(HttpHeaders.AUTHORIZATION)))
+                .contextExtractor(request -> userContext.fromHeaders(request.headers()::firstHeader))
                 .build();
     }
 }

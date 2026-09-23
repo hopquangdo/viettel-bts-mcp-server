@@ -4,37 +4,51 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.lang.NonNull;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
+import vn.edu.huce.iic.bts_ops_platform.mcp.security.McpUserContext;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
+import java.util.Set;
 
 /**
- * Bảo vệ MCP tool server (ATTT PL06.2#1: API server-server phải xác thực) — trước đây {@code
- * /mcp/**} để permitAll không kiểm soát. Yêu cầu header {@code X-API-Key} khớp {@code
- * app.mcp.api-key} (env {@code APP_MCP_API_KEY}).
+ * Bảo vệ MCP tool server và các endpoint debug liên quan (ATTT PL06.2#1: API server-server phải xác
+ * thực). Yêu cầu header {@code X-API-Key} khớp {@code app.mcp.api-key} (env {@code
+ * APP_MCP_API_KEY}).
  *
- * <p>Fail-closed: nếu CHƯA cấu hình khóa thì chặn toàn bộ /mcp (503) thay vì mở toang — MCP hiện
- * chưa dùng chính thức, muốn bật thì phải đặt khóa trước.
+ * <p>Fail-closed: nếu CHƯA cấu hình khóa thì chặn toàn bộ (503) thay vì mở toang.
+ *
+ * <p>Danh tính người dùng (id/quyền/khu vực) không còn xác thực bằng JWT — caller đã xác thực
+ * người dùng ở phía mình và tự gắn kèm các header {@code X-User-*} (xem {@link McpUserContext}); ở
+ * đây chỉ đọc và tin tưởng, miễn X-API-Key đúng.
  */
 @Slf4j
 @Component
+@RequiredArgsConstructor
 public class McpApiKeyFilter extends OncePerRequestFilter {
 
     private static final String HEADER = "X-API-Key";
+    private static final Set<String> PROTECTED_PREFIXES = Set.of("/mcp", "/api/v1/tools", "/api/v1/mcp");
+
+    private final McpUserContext userContext;
 
     @Value("${app.mcp.api-key:}")
     private String apiKey;
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
-        return !request.getRequestURI().startsWith("/mcp");
+        String uri = request.getRequestURI();
+        return PROTECTED_PREFIXES.stream().noneMatch(uri::startsWith);
     }
 
     @Override
@@ -55,7 +69,19 @@ public class McpApiKeyFilter extends OncePerRequestFilter {
             writeError(response, HttpServletResponse.SC_UNAUTHORIZED, "Thiếu hoặc sai X-API-Key");
             return;
         }
-        filterChain.doFilter(request, response);
+
+        userContext.resolve(request).ifPresent(user -> {
+            SecurityContextHolder.getContext().setAuthentication(
+                    new UsernamePasswordAuthenticationToken(user, null, user.getAuthorities()));
+            // Đưa username vào MDC cho log file (ATTT PL14#16) — xóa ở finally tránh rò rỉ
+            // sang request khác dùng lại thread từ pool.
+            MDC.put("username", user.tenDangNhap());
+        });
+        try {
+            filterChain.doFilter(request, response);
+        } finally {
+            MDC.remove("username");
+        }
     }
 
     private void writeError(HttpServletResponse response, int status, String message) throws IOException {

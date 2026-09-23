@@ -5,7 +5,7 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.stereotype.Service;
 import vn.edu.huce.iic.bts_ops_platform.mcp.common.dto.AppException;
 import vn.edu.huce.iic.bts_ops_platform.mcp.common.util.SecurityContextHelper;
-import vn.edu.huce.iic.bts_ops_platform.mcp.infrastructure.security.JwtUserPrincipal;
+import vn.edu.huce.iic.bts_ops_platform.mcp.infrastructure.security.McpUserPrincipal;
 import vn.edu.huce.iic.bts_ops_platform.mcp.security.auth.AuthErrorCode;
 import vn.edu.huce.iic.bts_ops_platform.mcp.dto.hopdong.HopDongDoiTuongResponse;
 import vn.edu.huce.iic.bts_ops_platform.mcp.repository.KhuVucRepository;
@@ -31,7 +31,7 @@ public class DataScopeService {
     }
 
     public Optional<UUID> currentKhuVucId() {
-        JwtUserPrincipal user = SecurityContextHelper.currentUserOrNull();
+        McpUserPrincipal user = SecurityContextHelper.currentUserOrNull();
         if (user == null || user.khuVucId() == null) {
             return Optional.empty();
         }

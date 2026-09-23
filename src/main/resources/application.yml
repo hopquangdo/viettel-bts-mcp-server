@@ -47,10 +47,6 @@ app:
     hop-dong-doi-tuong-snapshot-ttl-seconds: ${APP_CACHE_HOPDONG_DOITUONG_SNAPSHOT_TTL:86400}
     vuong-mac-row-ttl-seconds: ${APP_CACHE_VUONG_MAC_ROW_TTL:86400}
     hop-dong-doi-tuong-report-ttl-seconds: ${APP_CACHE_HOPDONG_DOITUONG_REPORT_TTL:86400}
-  jwt:
-    secret: ${JWT_SECRET}
-    access-token-expiration-ms: ${JWT_ACCESS_EXPIRATION_MS:900000}
-    refresh-token-expiration-days: ${JWT_REFRESH_EXPIRATION_DAYS:7}
 
 management:
   endpoints:

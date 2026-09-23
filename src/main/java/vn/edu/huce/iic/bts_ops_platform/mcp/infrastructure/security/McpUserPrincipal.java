@@ -9,7 +9,8 @@ import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 
-public record JwtUserPrincipal(
+/** Identity of the end user behind a request, populated from trusted headers set by the caller. */
+public record McpUserPrincipal(
         UUID id,
         String tenDangNhap,
         String hoTen,
@@ -17,7 +18,7 @@ public record JwtUserPrincipal(
         UUID khuVucId,
         List<GrantedAuthority> resolvedAuthorities) implements UserDetails {
 
-    public JwtUserPrincipal(
+    public McpUserPrincipal(
             UUID id,
             String tenDangNhap,
             String hoTen,
@@ -37,8 +38,8 @@ public record JwtUserPrincipal(
         return List.of(new SimpleGrantedAuthority("ROLE_QUYEN_" + quyenId));
     }
 
-    public JwtUserPrincipal withAuthorities(Collection<? extends GrantedAuthority> authorities) {
-        return new JwtUserPrincipal(
+    public McpUserPrincipal withAuthorities(Collection<? extends GrantedAuthority> authorities) {
+        return new McpUserPrincipal(
                 id, tenDangNhap, hoTen, quyenId, khuVucId, new ArrayList<>(authorities));
     }
 

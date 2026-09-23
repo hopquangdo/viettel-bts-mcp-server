@@ -12,4 +12,6 @@ public interface ThuocTinhProjection {
     String getTrangThaiVatTuB();
     LocalDate getNgayYeuCauVatTuB();
     LocalDate getNgayHoanThanhVatTuB();
+    /** Ngày ghi nhận sản lượng "done" đầu tiên — null nghĩa là chưa khởi công. */
+    LocalDate getNgayKhoiCong();
 }
