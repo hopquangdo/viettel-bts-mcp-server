@@ -5,6 +5,7 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.stereotype.Service;
 import vn.edu.huce.iic.bts_ops_platform.mcp.common.dto.AppException;
 import vn.edu.huce.iic.bts_ops_platform.mcp.common.util.SecurityContextHelper;
+import vn.edu.huce.iic.bts_ops_platform.mcp.config.AppDataScopeProperties;
 import vn.edu.huce.iic.bts_ops_platform.mcp.infrastructure.security.McpUserPrincipal;
 import vn.edu.huce.iic.bts_ops_platform.mcp.security.auth.AuthErrorCode;
 import vn.edu.huce.iic.bts_ops_platform.mcp.dto.hopdong.HopDongDoiTuongResponse;
@@ -25,9 +26,12 @@ import java.util.UUID;
 public class DataScopeService {
 
     private final KhuVucRepository khuVucRepository;
+    private final AppDataScopeProperties dataScopeProperties;
 
     public boolean isFullAccess() {
-        return SecurityContextHelper.currentUserOrNull() == null || laToanQuyen();
+        return !dataScopeProperties.enabled()
+                || SecurityContextHelper.currentUserOrNull() == null
+                || laToanQuyen();
     }
 
     public Optional<UUID> currentKhuVucId() {

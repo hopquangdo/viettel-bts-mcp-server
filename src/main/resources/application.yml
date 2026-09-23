@@ -32,6 +32,9 @@ server:
   port: ${MCP_SERVER_PORT:8081}
 
 app:
+  data-scope:
+    # Tạm thời cho phép MCP đọc toàn bộ dữ liệu; bật lại bằng APP_DATA_SCOPE_ENABLED=true.
+    enabled: false
   mcp:
     api-key: ${APP_MCP_API_KEY:}
   cache:
