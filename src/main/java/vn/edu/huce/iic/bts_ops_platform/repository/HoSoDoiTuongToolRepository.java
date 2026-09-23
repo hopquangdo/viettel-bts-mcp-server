@@ -9,7 +9,7 @@ import vn.edu.huce.iic.bts_ops_platform.dto.hosodoituong.ChuaKhaoSatProjection;
 import vn.edu.huce.iic.bts_ops_platform.dto.hosodoituong.KhaoSatXongChuaCoSanLuongProjection;
 import vn.edu.huce.iic.bts_ops_platform.dto.hosodoituong.ThuocTinhProjection;
 import vn.edu.huce.iic.bts_ops_platform.dto.hosodoituong.TongQuanProjection;
-import vn.edu.huce.iic.bts_ops_platform.modules.core.hopdong.sub_module.doituong.entity.HopDongDoiTuong;
+import vn.edu.huce.iic.bts_ops_platform.entity.doituong.HopDongDoiTuong;
 
 import java.time.LocalDate;
 import java.util.UUID;

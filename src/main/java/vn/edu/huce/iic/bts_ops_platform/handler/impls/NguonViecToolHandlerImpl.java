@@ -18,9 +18,9 @@ import vn.edu.huce.iic.bts_ops_platform.support.McpParallel;
 import vn.edu.huce.iic.bts_ops_platform.support.PagingUtil;
 import vn.edu.huce.iic.bts_ops_platform.support.ResolveSupport;
 import vn.edu.huce.iic.bts_ops_platform.support.StatusLabels;
-import vn.edu.huce.iic.bts_ops_platform.modules.business.nguonluc.dto.NguonViecManualRowDto;
-import vn.edu.huce.iic.bts_ops_platform.modules.business.nguonluc.entity.NguonViecBang;
-import vn.edu.huce.iic.bts_ops_platform.modules.core.hopdong.base.entity.HopDong;
+import vn.edu.huce.iic.bts_ops_platform.dto.nguonviec.NguonViecManualRowDto;
+import vn.edu.huce.iic.bts_ops_platform.entity.nguonluc.NguonViecBang;
+import vn.edu.huce.iic.bts_ops_platform.entity.hopdong.HopDong;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;

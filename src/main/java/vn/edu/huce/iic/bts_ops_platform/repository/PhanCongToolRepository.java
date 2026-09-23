@@ -9,7 +9,7 @@ import vn.edu.huce.iic.bts_ops_platform.dto.phancong.ChuaPhanCongRow;
 import vn.edu.huce.iic.bts_ops_platform.dto.phancong.NguoiDungRow;
 import vn.edu.huce.iic.bts_ops_platform.dto.phancong.TongQuanDoiTuongRow;
 import vn.edu.huce.iic.bts_ops_platform.dto.phancong.XepHangNhaThauRow;
-import vn.edu.huce.iic.bts_ops_platform.modules.core.hopdong.sub_module.doituong.entity.HopDongDoiTuong;
+import vn.edu.huce.iic.bts_ops_platform.entity.doituong.HopDongDoiTuong;
 
 import java.math.BigDecimal;
 import java.util.List;

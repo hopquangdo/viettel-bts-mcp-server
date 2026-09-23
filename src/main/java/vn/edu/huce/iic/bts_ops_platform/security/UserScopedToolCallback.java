@@ -8,7 +8,7 @@ import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import vn.edu.huce.iic.bts_ops_platform.common.dto.AppException;
 import vn.edu.huce.iic.bts_ops_platform.infrastructure.security.JwtUserPrincipal;
-import vn.edu.huce.iic.bts_ops_platform.modules.core.auth.exception.AuthErrorCode;
+import vn.edu.huce.iic.bts_ops_platform.security.auth.AuthErrorCode;
 
 /**
  * Runs a tool as the end user identified by the MCP request, so {@code DataScopeService} and

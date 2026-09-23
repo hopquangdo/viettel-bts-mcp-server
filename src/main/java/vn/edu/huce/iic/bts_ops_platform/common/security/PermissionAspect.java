@@ -11,7 +11,7 @@ import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 import vn.edu.huce.iic.bts_ops_platform.common.dto.AppException;
 import vn.edu.huce.iic.bts_ops_platform.common.openapi.QuyenHanMa;
-import vn.edu.huce.iic.bts_ops_platform.modules.core.auth.exception.AuthErrorCode;
+import vn.edu.huce.iic.bts_ops_platform.security.auth.AuthErrorCode;
 
 import java.lang.reflect.Method;
 import java.util.Arrays;

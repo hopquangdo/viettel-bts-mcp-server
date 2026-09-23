@@ -4,7 +4,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import vn.edu.huce.iic.bts_ops_platform.dto.doituong.DoiTuongInfoProjection;
-import vn.edu.huce.iic.bts_ops_platform.modules.core.cauhinh.entity.DoiTuongQuanLy;
+import vn.edu.huce.iic.bts_ops_platform.entity.cauhinh.DoiTuongQuanLy;
 
 import java.util.Optional;
 import java.util.UUID;

@@ -11,7 +11,7 @@ import org.springframework.util.StringUtils;
 import vn.edu.huce.iic.bts_ops_platform.common.dto.AppException;
 import vn.edu.huce.iic.bts_ops_platform.infrastructure.security.JwtService;
 import vn.edu.huce.iic.bts_ops_platform.infrastructure.security.JwtUserPrincipal;
-import vn.edu.huce.iic.bts_ops_platform.modules.core.auth.services.PhanQuyenResolverService;
+import vn.edu.huce.iic.bts_ops_platform.security.auth.PhanQuyenResolverService;
 
 import java.util.Map;
 import java.util.Optional;

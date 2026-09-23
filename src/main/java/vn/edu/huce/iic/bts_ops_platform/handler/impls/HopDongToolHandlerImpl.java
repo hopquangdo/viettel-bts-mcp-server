@@ -36,7 +36,7 @@ import vn.edu.huce.iic.bts_ops_platform.support.McpParallel;
 import vn.edu.huce.iic.bts_ops_platform.support.PagingUtil;
 import vn.edu.huce.iic.bts_ops_platform.support.ResolveSupport;
 import vn.edu.huce.iic.bts_ops_platform.support.StatusLabels;
-import vn.edu.huce.iic.bts_ops_platform.modules.core.hopdong.base.entity.HopDong;
+import vn.edu.huce.iic.bts_ops_platform.entity.hopdong.HopDong;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;

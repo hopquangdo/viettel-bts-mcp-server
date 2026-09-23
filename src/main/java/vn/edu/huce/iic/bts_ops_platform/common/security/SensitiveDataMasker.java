@@ -3,7 +3,7 @@ package vn.edu.huce.iic.bts_ops_platform.common.security;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.stereotype.Component;
 import vn.edu.huce.iic.bts_ops_platform.common.openapi.QuyenHanMa;
-import vn.edu.huce.iic.bts_ops_platform.modules.core.nguoidung.dto.response.NguoiDungResponse;
+import vn.edu.huce.iic.bts_ops_platform.dto.nguoidung.NguoiDungResponse;
 
 /**
  * Làm mờ dữ liệu nhạy cảm theo phân loại danh mục trọng yếu (email, SĐT).

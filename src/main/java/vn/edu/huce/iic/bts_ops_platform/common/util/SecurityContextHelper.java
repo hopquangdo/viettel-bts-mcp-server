@@ -3,7 +3,7 @@ package vn.edu.huce.iic.bts_ops_platform.common.util;
 import org.springframework.security.core.context.SecurityContextHolder;
 import vn.edu.huce.iic.bts_ops_platform.common.dto.AppException;
 import vn.edu.huce.iic.bts_ops_platform.infrastructure.security.JwtUserPrincipal;
-import vn.edu.huce.iic.bts_ops_platform.modules.core.auth.exception.AuthErrorCode;
+import vn.edu.huce.iic.bts_ops_platform.security.auth.AuthErrorCode;
 
 public final class SecurityContextHelper {
 

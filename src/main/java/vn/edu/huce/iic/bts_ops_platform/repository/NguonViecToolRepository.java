@@ -3,7 +3,7 @@ package vn.edu.huce.iic.bts_ops_platform.repository;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
-import vn.edu.huce.iic.bts_ops_platform.modules.core.hopdong.base.entity.HopDong;
+import vn.edu.huce.iic.bts_ops_platform.entity.hopdong.HopDong;
 
 import java.time.LocalDate;
 import java.util.Collection;

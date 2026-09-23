@@ -5,7 +5,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import vn.edu.huce.iic.bts_ops_platform.dto.khuvuc.KhuVucInfoProjection;
-import vn.edu.huce.iic.bts_ops_platform.modules.core.thuvien.entity.KhuVuc;
+import vn.edu.huce.iic.bts_ops_platform.entity.thuvien.KhuVuc;
 
 import java.util.Optional;
 import java.util.UUID;

@@ -7,7 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import vn.edu.huce.iic.bts_ops_platform.dto.tramton.ThieuNhieuDieuKienRow;
 import vn.edu.huce.iic.bts_ops_platform.dto.tramton.XepHangKhuVucRow;
-import vn.edu.huce.iic.bts_ops_platform.modules.core.hopdong.sub_module.doituong.entity.HopDongDoiTuong;
+import vn.edu.huce.iic.bts_ops_platform.entity.doituong.HopDongDoiTuong;
 
 import java.time.LocalDate;
 import java.util.List;

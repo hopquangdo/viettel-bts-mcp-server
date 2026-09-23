@@ -24,6 +24,8 @@ import vn.edu.huce.iic.bts_ops_platform.dto.sanluong.SanLuongDoiTuongItem;
 import vn.edu.huce.iic.bts_ops_platform.dto.sanluong.DoiTuongProgressProjection;
 import vn.edu.huce.iic.bts_ops_platform.dto.sanluong.ProgressGroupProjection;
 import vn.edu.huce.iic.bts_ops_platform.dto.sanluong.NhaThauChuaBaoProjection;
+import vn.edu.huce.iic.bts_ops_platform.dto.sanluong.NhaThauDaBaoProjection;
+import vn.edu.huce.iic.bts_ops_platform.dto.sanluong.SanLuongNhaThauDaBaoItem;
 import vn.edu.huce.iic.bts_ops_platform.dto.common.TrendInfo;
 import vn.edu.huce.iic.bts_ops_platform.dto.doituong.DoiTuongInfo;
 import vn.edu.huce.iic.bts_ops_platform.dto.hopdong.HopDongInfo;
@@ -156,6 +158,8 @@ public class SanLuongToolHandlerImpl implements SanLuongToolHandler {
                 resolvedTinhThanhId, loaiHopDongId, fromDateIn, toDateIn));
         var fChuaBao = parallel.async(() -> sanLuongToolRepository.findNhaThauChuaBaoTrongKy(fromDate, toDate,
                 nhaThauId, hopDongId, doiTuongIds, khuVucId, resolvedTinhThanhId, loaiHopDongId, pageNt));
+        var fDaBao = parallel.async(() -> sanLuongToolRepository.findNhaThauDaBaoTrongKy(fromDate, toDate,
+                nhaThauId, hopDongId, doiTuongIds, khuVucId, resolvedTinhThanhId, loaiHopDongId, pageNt));
 
         // danh sách từng đối tượng (đọc thêm lũy kế sản lượng): chạy song song với các truy vấn khác
         var fDanhSach = parallel.async(() -> sanLuongToolRepository.danhSachDoiTuong(Boolean.TRUE.equals(includeWithoutOutput) ? Boolean.TRUE : null,
@@ -229,6 +233,15 @@ public class SanLuongToolHandlerImpl implements SanLuongToolHandler {
                         pageNt.getPageNumber(), () -> sanLuongToolRepository.demNhaThauChuaBaoTrongKy(fromDate, toDate,
                                 nhaThauId, hopDongId, doiTuongIds, khuVucId, resolvedTinhThanhId, loaiHopDongId)));
 
+        var nhaThauDaBaoRows = McpParallel.get(fDaBao);
+        List<SanLuongNhaThauDaBaoItem> nhaThauDaBaoTrongKy = nhaThauDaBaoRows.stream()
+                .map(SanLuongToolHandlerImpl::mapNhaThauDaBao)
+                .toList();
+        PagedResult<SanLuongNhaThauDaBaoItem> nhaThauDaBaoTrongKyPaged = PagedResult.of(
+                nhaThauDaBaoTrongKy, pageNt.getPageNumber(), pageNt.getPageSize(), tongTheoTrang(nhaThauDaBaoRows.isEmpty() ? null : nhaThauDaBaoRows.get(0).getTong(),
+                        pageNt.getPageNumber(), () -> sanLuongToolRepository.demNhaThauDaBaoTrongKy(fromDate, toDate,
+                                nhaThauId, hopDongId, doiTuongIds, khuVucId, resolvedTinhThanhId, loaiHopDongId)));
+
         var ntKhongDatPage = McpParallel.get(fNtKhongDat);
         long soDat = 0;
         BigDecimal giaTriDat = BigDecimal.ZERO;
@@ -285,6 +298,7 @@ public class SanLuongToolHandlerImpl implements SanLuongToolHandler {
                 .doiTuong(doiTuongCuThe ? null : doiTuongRanking)
                 .periodTrend(periodTrend)
                 .nhaThauChuaBaoTrongKy(nhaThauChuaBaoTrongKyPaged)
+                .nhaThauDaBaoTrongKy(nhaThauDaBaoTrongKyPaged)
                 .nghiemThu(nghiemThu)
                 .doiTuongChuaCoSanLuong(doiTuongChuaCo)
                 .danhSachDoiTuong(danhSachTrang(McpParallel.get(fDanhSach), pageNt.getPageNumber(), pageNt.getPageSize(), () -> tongDanhSach(
@@ -563,6 +577,14 @@ public class SanLuongToolHandlerImpl implements SanLuongToolHandler {
         SanLuongNhaThauChuaBaoItem item = new SanLuongNhaThauChuaBaoItem();
         item.setNhaThau(NhaThauInfo.of(row.getNhaThauId(), row.getTenNhaThau()));
         item.setSoDoiTuongPhuTrach(NumberUtil.nz(row.getSoDoiTuongPhuTrach()));
+        return item;
+    }
+
+    private static SanLuongNhaThauDaBaoItem mapNhaThauDaBao(NhaThauDaBaoProjection row) {
+        SanLuongNhaThauDaBaoItem item = new SanLuongNhaThauDaBaoItem();
+        item.setNhaThau(NhaThauInfo.of(row.getNhaThauId(), row.getTenNhaThau()));
+        item.setSoDoiTuongPhuTrach(NumberUtil.nz(row.getSoDoiTuongPhuTrach()));
+        item.setGiaTriDaBao(NumberUtil.nz(row.getGiaTriDaBao()));
         return item;
     }
 

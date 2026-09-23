@@ -6,7 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import vn.edu.huce.iic.bts_ops_platform.dto.nhathau.NhaThauInfoProjection;
-import vn.edu.huce.iic.bts_ops_platform.modules.core.nguoidung.entity.NguoiDung;
+import vn.edu.huce.iic.bts_ops_platform.entity.nguoidung.NguoiDung;
 
 import java.util.List;
 import java.util.Optional;

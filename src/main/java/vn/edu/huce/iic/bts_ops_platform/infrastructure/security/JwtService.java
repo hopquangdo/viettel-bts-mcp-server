@@ -9,9 +9,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import vn.edu.huce.iic.bts_ops_platform.common.dto.AppException;
 import vn.edu.huce.iic.bts_ops_platform.config.JwtProperties;
-import vn.edu.huce.iic.bts_ops_platform.modules.core.nguoidung.entity.NguoiDung;
-import vn.edu.huce.iic.bts_ops_platform.modules.core.auth.exception.AuthErrorCode;
-import vn.edu.huce.iic.bts_ops_platform.modules.core.auth.services.PhanQuyenResolverService.TokenScope;
+import vn.edu.huce.iic.bts_ops_platform.entity.nguoidung.NguoiDung;
+import vn.edu.huce.iic.bts_ops_platform.security.auth.AuthErrorCode;
+import vn.edu.huce.iic.bts_ops_platform.security.auth.PhanQuyenResolverService.TokenScope;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;

@@ -6,7 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import vn.edu.huce.iic.bts_ops_platform.dto.nhatky.NhatKyRow;
-import vn.edu.huce.iic.bts_ops_platform.modules.auditlog.entity.AuditLog;
+import vn.edu.huce.iic.bts_ops_platform.entity.auditlog.AuditLog;
 
 import java.time.Instant;
 import java.util.Collection;

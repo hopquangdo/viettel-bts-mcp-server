@@ -6,7 +6,7 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 import vn.edu.huce.iic.bts_ops_platform.common.dto.AppException;
 import vn.edu.huce.iic.bts_ops_platform.config.AppStorageProperties;
-import vn.edu.huce.iic.bts_ops_platform.modules.core.file.exception.FileErrorCode;
+import vn.edu.huce.iic.bts_ops_platform.infrastructure.storage.FileErrorCode;
 
 import java.io.IOException;
 import java.nio.file.Files;

@@ -22,7 +22,7 @@ import vn.edu.huce.iic.bts_ops_platform.repository.NganHoToolRepository;
 import vn.edu.huce.iic.bts_ops_platform.components.HopDongComponent;
 import vn.edu.huce.iic.bts_ops_platform.support.NganHoFormulaCalc;
 import vn.edu.huce.iic.bts_ops_platform.support.StatusLabels;
-import vn.edu.huce.iic.bts_ops_platform.modules.core.hopdong.base.entity.HopDong;
+import vn.edu.huce.iic.bts_ops_platform.entity.hopdong.HopDong;
 
 import vn.edu.huce.iic.bts_ops_platform.support.ResolveSupport;
 

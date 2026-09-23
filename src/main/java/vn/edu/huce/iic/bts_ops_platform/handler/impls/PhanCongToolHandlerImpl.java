@@ -31,7 +31,7 @@ import vn.edu.huce.iic.bts_ops_platform.support.McpParallel;
 import vn.edu.huce.iic.bts_ops_platform.support.PagingUtil;
 import vn.edu.huce.iic.bts_ops_platform.support.ResolveSupport;
 import vn.edu.huce.iic.bts_ops_platform.common.util.EntityFilter;
-import vn.edu.huce.iic.bts_ops_platform.modules.business.phancong.entity.PhanCong;
+import vn.edu.huce.iic.bts_ops_platform.entity.phancong.PhanCong;
 
 import java.util.Comparator;
 import java.util.HashMap;

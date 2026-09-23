@@ -7,9 +7,10 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import vn.edu.huce.iic.bts_ops_platform.dto.sanluong.DoiTuongProgressProjection;
 import vn.edu.huce.iic.bts_ops_platform.dto.sanluong.NhaThauChuaBaoProjection;
+import vn.edu.huce.iic.bts_ops_platform.dto.sanluong.NhaThauDaBaoProjection;
 import vn.edu.huce.iic.bts_ops_platform.dto.sanluong.ProgressGroupProjection;
 import vn.edu.huce.iic.bts_ops_platform.dto.sanluong.SanLuongTongHopProjection;
-import vn.edu.huce.iic.bts_ops_platform.modules.business.sanluong.entity.SanLuong;
+import vn.edu.huce.iic.bts_ops_platform.entity.sanluong.SanLuong;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -525,6 +526,92 @@ public interface SanLuongToolRepository extends JpaRepository<SanLuong, UUID> {
                 SELECT COUNT(*) FROM agg WHERE soDaBao = 0
                 """, nativeQuery = true)
     long demNhaThauChuaBaoTrongKy(
+            @Param("fromDate") LocalDate fromDate, @Param("toDate") LocalDate toDate,
+            @Param("nhaThauId") UUID nhaThauId, @Param("hopDongId") UUID hopDongId,
+            @Param("doiTuongIds") String doiTuongIds, @Param("khuVucId") UUID khuVucId,
+            @Param("tinhThanhId") UUID tinhThanhId, @Param("loaiHopDongId") UUID loaiHopDongId);
+
+    /**
+     * Nhà thầu đang phụ trách >=1 đối tượng hoạt động và CÓ ÍT NHẤT 1 bản ghi san_luong 'done'
+     * trong [fromDate, toDate] cho đối tượng mình phụ trách (lọc theo bộ lọc thu hẹp nếu có) — đối
+     * xứng với {@link #findNhaThauChuaBaoTrongKy}. {@code giaTriDaBao} là tổng giá trị các bản ghi
+     * 'done' trong kỳ của nhà thầu đó (không giới hạn theo đối tượng đã lọc riêng lẻ ở trên).
+     */
+    @Query(value = """
+            WITH agg AS (
+                SELECT d.nha_thau_id,
+                       COUNT(*) AS soDoiTuong,
+                       COUNT(*) FILTER (WHERE EXISTS (
+                           SELECT 1 FROM san_luong s
+                           WHERE s.hop_dong_doi_tuong_id = d.id AND s.ngay_xoa IS NULL AND s.hoat_dong = TRUE
+                             AND s.trang_thai = 'done'
+                             AND s.ngay_thuc_hien BETWEEN :fromDate AND :toDate
+                       )) AS soDaBao
+                FROM hop_dong_doi_tuong d
+                INNER JOIN hop_dong h ON h.id = d.hop_dong_id AND h.ngay_xoa IS NULL AND h.hoat_dong = TRUE
+                WHERE d.ngay_xoa IS NULL AND d.hoat_dong = TRUE AND d.nha_thau_id IS NOT NULL
+                  AND (CAST(:nhaThauId AS uuid) IS NULL OR d.nha_thau_id = CAST(:nhaThauId AS uuid))
+                  AND (CAST(:hopDongId AS uuid) IS NULL OR d.hop_dong_id = CAST(:hopDongId AS uuid))
+                  AND (CAST(:doiTuongIds AS text) IS NULL OR d.doi_tuong_quan_ly_id = ANY(CAST(string_to_array(:doiTuongIds, ',') AS uuid[])) OR d.id = ANY(CAST(string_to_array(:doiTuongIds, ',') AS uuid[])))
+                      AND (CAST(:khuVucId AS uuid) IS NULL OR d.khu_vuc_id = CAST(:khuVucId AS uuid))
+                      AND (CAST(:tinhThanhId AS uuid) IS NULL OR d.tinh_thanh_id = CAST(:tinhThanhId AS uuid))
+                      AND (CAST(:loaiHopDongId AS uuid) IS NULL OR d.hop_dong_id IN (SELECT lh.id FROM hop_dong lh WHERE lh.loai_hop_dong_id = CAST(:loaiHopDongId AS uuid)))
+                GROUP BY d.nha_thau_id
+            ),
+            gt AS (
+                SELECT d.nha_thau_id, SUM(COALESCE(s.don_gia, 0) * COALESCE(s.khoi_luong_hoan_thanh, 0)) AS giaTriDaBao
+                FROM san_luong s
+                JOIN hop_dong_doi_tuong d ON d.id = s.hop_dong_doi_tuong_id AND d.ngay_xoa IS NULL AND d.hoat_dong = TRUE
+                INNER JOIN hop_dong h ON h.id = d.hop_dong_id AND h.ngay_xoa IS NULL AND h.hoat_dong = TRUE
+                WHERE s.ngay_xoa IS NULL AND s.hoat_dong = TRUE AND s.trang_thai = 'done'
+                  AND s.ngay_thuc_hien BETWEEN :fromDate AND :toDate
+                  AND (CAST(:nhaThauId AS uuid) IS NULL OR d.nha_thau_id = CAST(:nhaThauId AS uuid))
+                  AND (CAST(:hopDongId AS uuid) IS NULL OR d.hop_dong_id = CAST(:hopDongId AS uuid))
+                  AND (CAST(:doiTuongIds AS text) IS NULL OR d.doi_tuong_quan_ly_id = ANY(CAST(string_to_array(:doiTuongIds, ',') AS uuid[])) OR d.id = ANY(CAST(string_to_array(:doiTuongIds, ',') AS uuid[])))
+                  AND (CAST(:khuVucId AS uuid) IS NULL OR d.khu_vuc_id = CAST(:khuVucId AS uuid))
+                  AND (CAST(:tinhThanhId AS uuid) IS NULL OR d.tinh_thanh_id = CAST(:tinhThanhId AS uuid))
+                  AND (CAST(:loaiHopDongId AS uuid) IS NULL OR d.hop_dong_id IN (SELECT lh.id FROM hop_dong lh WHERE lh.loai_hop_dong_id = CAST(:loaiHopDongId AS uuid)))
+                GROUP BY d.nha_thau_id
+            )
+            SELECT nd.id AS nhaThauId, nd.ho_ten AS tenNhaThau, agg.soDoiTuong AS soDoiTuongPhuTrach,
+                   COALESCE(gt.giaTriDaBao, 0) AS giaTriDaBao, COUNT(*) OVER () AS tong
+            FROM agg
+            INNER JOIN nguoi_dung nd ON nd.id = agg.nha_thau_id
+            LEFT JOIN gt ON gt.nha_thau_id = agg.nha_thau_id
+            WHERE agg.soDaBao > 0
+                ORDER BY nd.ho_ten
+                """,
+            nativeQuery = true)
+    List<NhaThauDaBaoProjection> findNhaThauDaBaoTrongKy(
+            @Param("fromDate") LocalDate fromDate, @Param("toDate") LocalDate toDate,
+            @Param("nhaThauId") UUID nhaThauId, @Param("hopDongId") UUID hopDongId,
+                    @Param("doiTuongIds") String doiTuongIds, @Param("khuVucId") UUID khuVucId,
+                    @Param("tinhThanhId") UUID tinhThanhId, @Param("loaiHopDongId") UUID loaiHopDongId, Pageable pageable);
+
+    /** Tổng số nhà thầu của {@link #findNhaThauDaBaoTrongKy} — chạy song song với câu lấy trang. */
+    @Query(value = """
+                WITH agg AS (
+              SELECT d.nha_thau_id,
+                     COUNT(*) FILTER (WHERE EXISTS (
+                   SELECT 1 FROM san_luong s
+                   WHERE s.hop_dong_doi_tuong_id = d.id AND s.ngay_xoa IS NULL AND s.hoat_dong = TRUE
+                     AND s.trang_thai = 'done'
+                     AND s.ngay_thuc_hien BETWEEN :fromDate AND :toDate
+                     )) AS soDaBao
+              FROM hop_dong_doi_tuong d
+              INNER JOIN hop_dong h ON h.id = d.hop_dong_id AND h.ngay_xoa IS NULL AND h.hoat_dong = TRUE
+              WHERE d.ngay_xoa IS NULL AND d.hoat_dong = TRUE AND d.nha_thau_id IS NOT NULL
+                AND (CAST(:nhaThauId AS uuid) IS NULL OR d.nha_thau_id = CAST(:nhaThauId AS uuid))
+                AND (CAST(:hopDongId AS uuid) IS NULL OR d.hop_dong_id = CAST(:hopDongId AS uuid))
+                AND (CAST(:doiTuongIds AS text) IS NULL OR d.doi_tuong_quan_ly_id = ANY(CAST(string_to_array(:doiTuongIds, ',') AS uuid[])) OR d.id = ANY(CAST(string_to_array(:doiTuongIds, ',') AS uuid[])))
+                AND (CAST(:khuVucId AS uuid) IS NULL OR d.khu_vuc_id = CAST(:khuVucId AS uuid))
+                AND (CAST(:tinhThanhId AS uuid) IS NULL OR d.tinh_thanh_id = CAST(:tinhThanhId AS uuid))
+                AND (CAST(:loaiHopDongId AS uuid) IS NULL OR d.hop_dong_id IN (SELECT lh.id FROM hop_dong lh WHERE lh.loai_hop_dong_id = CAST(:loaiHopDongId AS uuid)))
+              GROUP BY d.nha_thau_id
+                )
+                SELECT COUNT(*) FROM agg WHERE soDaBao > 0
+                """, nativeQuery = true)
+    long demNhaThauDaBaoTrongKy(
             @Param("fromDate") LocalDate fromDate, @Param("toDate") LocalDate toDate,
             @Param("nhaThauId") UUID nhaThauId, @Param("hopDongId") UUID hopDongId,
             @Param("doiTuongIds") String doiTuongIds, @Param("khuVucId") UUID khuVucId,

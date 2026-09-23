@@ -24,9 +24,8 @@ public class RequestFlowTracingAspect {
     private final AppLoggingProperties loggingProperties;
 
     @Around(
-            "execution(* vn.edu.huce.iic.bts_ops_platform.modules..controller..*(..))"
-                    + " || execution(* vn.edu.huce.iic.bts_ops_platform.modules..service.impl..*(..))"
-                    + " || execution(* vn.edu.huce.iic.bts_ops_platform.modules..repository..*(..))")
+            "execution(* vn.edu.huce.iic.bts_ops_platform.handler..*(..))"
+                + " || execution(* vn.edu.huce.iic.bts_ops_platform.repository..*(..))")
     public Object traceRequestFlow(ProceedingJoinPoint joinPoint) throws Throwable {
         int depth = CALL_DEPTH.get();
         String indent = "  ".repeat(depth);

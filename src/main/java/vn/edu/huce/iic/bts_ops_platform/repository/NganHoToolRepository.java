@@ -4,7 +4,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import vn.edu.huce.iic.bts_ops_platform.dto.nganho.TongQuanAggregateRow;
-import vn.edu.huce.iic.bts_ops_platform.modules.core.hopdong.base.entity.HopDong;
+import vn.edu.huce.iic.bts_ops_platform.entity.hopdong.HopDong;
 
 import java.math.BigDecimal;
 import java.util.Collection;

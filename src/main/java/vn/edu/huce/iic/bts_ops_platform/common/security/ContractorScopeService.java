@@ -9,10 +9,10 @@ import vn.edu.huce.iic.bts_ops_platform.common.dto.AppException;
 import vn.edu.huce.iic.bts_ops_platform.common.util.SecurityContextHelper;
 import vn.edu.huce.iic.bts_ops_platform.config.AppCacheProperties;
 import vn.edu.huce.iic.bts_ops_platform.infrastructure.security.JwtUserPrincipal;
-import vn.edu.huce.iic.bts_ops_platform.modules.core.auth.exception.AuthErrorCode;
-import vn.edu.huce.iic.bts_ops_platform.modules.business.phancong.entity.PhanCong;
-import vn.edu.huce.iic.bts_ops_platform.modules.business.phancong.repository.PhanCongRepository;
-import vn.edu.huce.iic.bts_ops_platform.modules.core.auth.repository.QuyenRepository;
+import vn.edu.huce.iic.bts_ops_platform.security.auth.AuthErrorCode;
+import vn.edu.huce.iic.bts_ops_platform.entity.phancong.PhanCong;
+import vn.edu.huce.iic.bts_ops_platform.repository.PhanCongRepository;
+import vn.edu.huce.iic.bts_ops_platform.security.auth.QuyenRepository;
 
 import java.util.HashSet;
 import java.util.List;

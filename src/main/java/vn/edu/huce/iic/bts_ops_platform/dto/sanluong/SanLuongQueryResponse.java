@@ -37,6 +37,8 @@ public class SanLuongQueryResponse {
     private RankingOverviewDto loaiHopDong;
     /** Nhà thầu đang phụ trách đối tượng hoạt động nhưng chưa có sản lượng 'done' trong [fromDate, toDate] — luôn có, phân trang theo page/pageSize. */
     private PagedResult<SanLuongNhaThauChuaBaoItem> nhaThauChuaBaoTrongKy;
+    /** Nhà thầu đang phụ trách đối tượng hoạt động và đã có sản lượng 'done' trong [fromDate, toDate] — luôn có, phân trang theo page/pageSize. */
+    private PagedResult<SanLuongNhaThauDaBaoItem> nhaThauDaBaoTrongKy;
     /** Nghiệm thu sản lượng: số hạng mục đạt/không đạt và danh sách không đạt kèm lý do (lọc ngày theo ngày nghiệm thu) — luôn có. */
     private SanLuongNghiemThuDto nghiemThu;
     /** Đối tượng (trạm, tuyến…) chưa ghi nhận sản lượng hoàn thành nào trong khoảng ngày, theo bộ lọc; phân trang theo page/pageSize — luôn có. */

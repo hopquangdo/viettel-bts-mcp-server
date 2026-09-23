@@ -7,7 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import vn.edu.huce.iic.bts_ops_platform.dto.bienban.BienBanTheoTrangThaiRow;
 import vn.edu.huce.iic.bts_ops_platform.dto.bienban.DemNhomRow;
-import vn.edu.huce.iic.bts_ops_platform.modules.core.hopdong.bienban.entity.BienBan;
+import vn.edu.huce.iic.bts_ops_platform.entity.bienban.BienBan;
 
 import java.time.LocalDate;
 import java.util.List;

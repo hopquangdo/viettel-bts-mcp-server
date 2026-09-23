@@ -5,7 +5,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import vn.edu.huce.iic.bts_ops_platform.dto.hopdong.HopDongInfoProjection;
-import vn.edu.huce.iic.bts_ops_platform.modules.core.hopdong.base.entity.HopDong;
+import vn.edu.huce.iic.bts_ops_platform.entity.hopdong.HopDong;
 
 import java.util.Optional;
 import java.util.UUID;

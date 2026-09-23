@@ -6,10 +6,10 @@ import org.springframework.stereotype.Service;
 import vn.edu.huce.iic.bts_ops_platform.common.dto.AppException;
 import vn.edu.huce.iic.bts_ops_platform.common.util.SecurityContextHelper;
 import vn.edu.huce.iic.bts_ops_platform.infrastructure.security.JwtUserPrincipal;
-import vn.edu.huce.iic.bts_ops_platform.modules.core.auth.exception.AuthErrorCode;
-import vn.edu.huce.iic.bts_ops_platform.modules.core.hopdong.base.dto.response.HopDongDoiTuongResponse;
-import vn.edu.huce.iic.bts_ops_platform.modules.core.thuvien.dto.response.KhuVucResponse;
-import vn.edu.huce.iic.bts_ops_platform.modules.core.thuvien.services.KhuVucService;
+import vn.edu.huce.iic.bts_ops_platform.security.auth.AuthErrorCode;
+import vn.edu.huce.iic.bts_ops_platform.dto.hopdong.HopDongDoiTuongResponse;
+import vn.edu.huce.iic.bts_ops_platform.dto.thuvien.KhuVucResponse;
+import vn.edu.huce.iic.bts_ops_platform.repository.KhuVucRepository;
 
 import java.util.Collection;
 import java.util.List;
@@ -25,7 +25,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class DataScopeService {
 
-    private final KhuVucService khuVucService;
+    private final KhuVucRepository khuVucRepository;
 
     public boolean isFullAccess() {
         return SecurityContextHelper.currentUserOrNull() == null || laToanQuyen();
@@ -63,8 +63,8 @@ public class DataScopeService {
         if (scope == null) {
             return requestedTrungTam;
         }
-        KhuVucResponse khuVuc = khuVucService.getById(scope);
-        String forced = firstNonBlank(khuVuc.getTen(), khuVuc.getMa());
+        var khuVuc = khuVucRepository.findInfoById(scope).orElse(null);
+        String forced = khuVuc == null ? "" : firstNonBlank(khuVuc.getTen(), khuVuc.getMa());
         if (requestedTrungTam != null && !requestedTrungTam.isBlank()
                 && !"all".equalsIgnoreCase(requestedTrungTam.trim())) {
             String req = requestedTrungTam.trim().toLowerCase(Locale.ROOT);

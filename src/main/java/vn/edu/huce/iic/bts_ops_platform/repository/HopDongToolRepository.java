@@ -10,7 +10,7 @@ import vn.edu.huce.iic.bts_ops_platform.dto.hopdong.PhanBoBuocProjection;
 import vn.edu.huce.iic.bts_ops_platform.dto.hopdong.ThongKeKhuVucProjection;
 import vn.edu.huce.iic.bts_ops_platform.dto.hopdong.XepHangKhuVucProjection;
 import vn.edu.huce.iic.bts_ops_platform.dto.hopdong.XepHangTinhProjection;
-import vn.edu.huce.iic.bts_ops_platform.modules.core.hopdong.base.entity.HopDong;
+import vn.edu.huce.iic.bts_ops_platform.entity.hopdong.HopDong;
 
 import java.util.List;
 import java.util.UUID;

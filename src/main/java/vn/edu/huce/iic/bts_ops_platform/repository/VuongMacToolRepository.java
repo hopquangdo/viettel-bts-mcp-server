@@ -6,7 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import vn.edu.huce.iic.bts_ops_platform.dto.vuongmac.HopDongOpenCountProjection;
-import vn.edu.huce.iic.bts_ops_platform.modules.business.vuongmac.entity.VuongMac;
+import vn.edu.huce.iic.bts_ops_platform.entity.vuongmac.VuongMac;
 
 import java.time.Instant;
 import java.util.List;

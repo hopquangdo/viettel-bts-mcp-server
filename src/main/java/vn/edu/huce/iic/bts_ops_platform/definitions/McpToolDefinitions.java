@@ -58,9 +58,11 @@ public class McpToolDefinitions {
             description = """
                     Mục đích: Báo cáo sản lượng theo khoảng thời gian đã chọn, lọc theo đối tượng, hợp đồng,
                     nhà thầu hoặc khu vực.
-                    Dùng khi: cần tổng hợp sản lượng, xếp hạng, xu hướng hoặc tìm nhà thầu chưa báo trong kỳ.
+                    Dùng khi: cần tổng hợp sản lượng, xếp hạng, xu hướng hoặc tìm nhà thầu đã/chưa báo trong kỳ.
                     Trả về: summary, progress, trend, ranking theo nhaThau/khuVuc/tinh/hopDong/loaiHopDong/doiTuong (bảng cùng cấp với bộ lọc được bỏ; sắp xếp bằng xepHangTheo),
-                    periodTrend (giá trị sản lượng theo từng kỳ con) và nhaThauChuaBaoTrongKy.
+                    periodTrend (giá trị sản lượng theo từng kỳ con), nhaThauChuaBaoTrongKy (nhà thầu CHƯA có sản lượng 'done' trong kỳ)
+                    và nhaThauDaBaoTrongKy (nhà thầu ĐÃ có sản lượng 'done' trong kỳ, kèm giaTriDaBao). Muốn biết "nhà thầu nào đã báo sản lượng
+                    hôm nay": gọi với fromDate=toDate=hôm nay rồi đọc nhaThauDaBaoTrongKy.
                     Ngoài ra: doiTuongChuaCoSanLuong (đối tượng/trạm nào chưa ghi nhận sản lượng trong khoảng ngày, phân trang) và nghiemThu
                     (số hạng mục và giá trị đã duyệt = nghiệm thu đạt, không đạt kèm lý do, chờ nghiệm thu). summary.periodValue là tiền đã báo.
                     Khi doiTuong là mã/id của đối tượng cụ thể (trạm, tuyến): có hangMucDoiTuong (hạng mục đã làm và chưa làm, tối đa 5 đối tượng).
@@ -77,7 +79,7 @@ public class McpToolDefinitions {
             @ToolParam(description = "Tỉnh/thành cần lọc: ID, mã hoặc tên. Ví dụ: BNH (Bắc Ninh), NAN (Nghệ An), THA (Thanh Hóa)", required = false) String tinhThanh,
             @ToolParam(description = "Ngày bắt đầu của khoảng thời gian tính sản lượng", required = false) LocalDate fromDate,
             @ToolParam(description = "Ngày kết thúc của khoảng thời gian tính sản lượng", required = false) LocalDate toDate,
-            @ToolParam(description = "Trang kết quả (0-based) cho nhaThauChuaBaoTrongKy, mặc định 0", required = false) Integer page,
+            @ToolParam(description = "Trang kết quả (0-based) cho nhaThauChuaBaoTrongKy/nhaThauDaBaoTrongKy, mặc định 0", required = false) Integer page,
             @ToolParam(description = "Số dòng mỗi trang, mặc định 3, tối đa 100", required = false) Integer pageSize,
             @ToolParam(description = "Ngưỡng % hoàn thành hạng mục: đối tượng đang thi công dưới mức này tính vào lowCompletionCount, mặc định 50", required = false) Double nguongHoanThanhThap,
             @ToolParam(description = "false: chỉ liệt kê đối tượng đã có sản lượng trong kỳ ở topDoiTuong; bỏ trống hoặc true: gồm cả đối tượng chưa có sản lượng", required = false) Boolean includeWithoutOutput,

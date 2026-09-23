@@ -22,7 +22,7 @@ import vn.edu.huce.iic.bts_ops_platform.support.McpParallel;
 import vn.edu.huce.iic.bts_ops_platform.support.PagingUtil;
 import vn.edu.huce.iic.bts_ops_platform.support.ResolveSupport;
 import vn.edu.huce.iic.bts_ops_platform.dto.common.PagedResult;
-import vn.edu.huce.iic.bts_ops_platform.modules.business.vuongmac.entity.VuongMac;
+import vn.edu.huce.iic.bts_ops_platform.entity.vuongmac.VuongMac;
 
 import java.time.Duration;
 import java.time.Instant;

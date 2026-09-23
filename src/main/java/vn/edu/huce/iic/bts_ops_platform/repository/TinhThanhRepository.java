@@ -5,7 +5,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import vn.edu.huce.iic.bts_ops_platform.dto.tinh.TinhThanhInfoProjection;
 import org.springframework.stereotype.Repository;
-import vn.edu.huce.iic.bts_ops_platform.modules.core.thuvien.entity.TinhThanh;
+import vn.edu.huce.iic.bts_ops_platform.entity.thuvien.TinhThanh;
 
 import java.util.Optional;
 import java.util.UUID;

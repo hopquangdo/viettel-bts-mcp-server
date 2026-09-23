@@ -58,3 +58,16 @@ tasks.named('bootJar') {
 tasks.named('test') {
     useJUnitPlatform()
 }
+
+tasks.named('bootRun') {
+    def dotEnv = file('.env')
+    if (dotEnv.exists()) {
+        dotEnv.eachLine { line ->
+            def trimmed = line.trim()
+            if (!trimmed.isEmpty() && !trimmed.startsWith('#') && trimmed.contains('=')) {
+                def idx = trimmed.indexOf('=')
+                environment trimmed.substring(0, idx).trim(), trimmed.substring(idx + 1).trim()
+            }
+        }
+    }
+}

@@ -14,7 +14,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
-import vn.edu.huce.iic.bts_ops_platform.modules.core.auth.services.PhanQuyenResolverService;
+import vn.edu.huce.iic.bts_ops_platform.security.auth.PhanQuyenResolverService;
 
 import java.io.IOException;
 
