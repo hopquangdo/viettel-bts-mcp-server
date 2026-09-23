@@ -57,6 +57,10 @@ public class HopDongDoiTuong extends AuditableEntity {
     @Column(name = "ngay_thi_cong_gan_nhat")
     private LocalDate ngayThiCongGanNhat;
 
+    /** Denormalize từ MIN(SanLuong.ngayThucHien WHERE trangThai='done') — ngày khởi công; null: chưa khởi công. Do business-api cập nhật. */
+    @Column(name = "ngay_khoi_cong")
+    private LocalDate ngayKhoiCong;
+
     /**
      * Denormalize từ SUM(SanLuong.khoiLuongHoanThanh × donGia) + boSungSanLuong — xem
      * HopDongDoiTuongRepository.recalculateSanLuongHieuLuc. Tự cập nhật ở SanLuongConsumer

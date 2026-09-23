@@ -9,7 +9,7 @@ import vn.edu.huce.iic.bts_ops_platform.mcp.dto.hopdong.HopDongInfo;
 
 import java.time.LocalDate;
 
-/** Thuộc tính khảo sát THỰC CÓ trong DB của 1 đối tượng cụ thể — trả về cho hosodoituong_tool.thuocTinh. */
+/** Thuộc tính khảo sát THỰC CÓ trong DB của 1 đối tượng cụ thể — trả về cho doituong_tool.hoSoDoiTuong.thuocTinh. */
 @Data
 @Builder
 @NoArgsConstructor

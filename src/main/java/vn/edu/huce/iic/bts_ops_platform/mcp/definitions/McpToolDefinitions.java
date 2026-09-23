@@ -5,7 +5,6 @@ import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
 import org.springframework.stereotype.Service;
 import vn.edu.huce.iic.bts_ops_platform.mcp.dto.bienban.BienBanQueryResponse;
-import vn.edu.huce.iic.bts_ops_platform.mcp.dto.hosodoituong.HoSoDoiTuongQueryResponse;
 import vn.edu.huce.iic.bts_ops_platform.mcp.dto.hopdong.HopDongQueryResponse;
 import vn.edu.huce.iic.bts_ops_platform.mcp.dto.nganho.NganHoQueryResponse;
 import vn.edu.huce.iic.bts_ops_platform.mcp.dto.nguonviec.NguonViecQueryResponse;
@@ -318,31 +317,6 @@ public class McpToolDefinitions {
         return nhatKyToolHandler.query(doiTuong, hopDong, hanhDong, nguoiThucHien, fromDate, toDate, thuTu, page, pageSize);
     }
 
-    // ------------------------------------------------------------------ hosodoituong_tool
-
-    @Tool(
-            name = "hosodoituong_tool",
-            description = """
-                    Mục đích: Hồ sơ thuộc tính khảo sát của một đối tượng hoặc một hợp đồng.
-                    Dùng khi: cần kiểm tra thông tin bàn giao mặt bằng, vật tư, đối tượng chưa khảo sát hoặc đã khảo sát nhưng chưa có sản lượng.
-                    Trả về: tongQuan, thuocTinh, chuaKhaoSat và khaoSatXongChuaCoSanLuong.
-                    """
-    )
-    public HoSoDoiTuongQueryResponse hoSoDoiTuong(
-            @ToolParam(description = ToolParamDescriptions.DOI_TUONG, required = false) String doiTuong,
-                        @ToolParam(description = ToolParamDescriptions.HOP_DONG, required = false) String hopDong,
-            @ToolParam(description = ToolParamDescriptions.NHA_THAU, required = false) String nhaThau,
-            @ToolParam(description = ToolParamDescriptions.KHU_VUC, required = false) String khuVuc,
-            @ToolParam(description = ToolParamDescriptions.TINH_THANH, required = false) String tinhThanh,
-            @ToolParam(description = "Bước trạng thái của đối tượng trong hợp đồng cần lọc: ID, mã hoặc tên (ví dụ Khảo sát, Thi công)", required = false) String trangThaiHopDong,
-            @ToolParam(description = "true: chỉ đối tượng thuộc nhóm ưu tiên; false: chỉ đối tượng không thuộc nhóm ưu tiên; bỏ trống: tất cả", required = false) Boolean coNhomUuTien,
-            @ToolParam(description = ToolParamDescriptions.FROM_DATE, required = false) LocalDate fromDate,
-            @ToolParam(description = ToolParamDescriptions.TO_DATE, required = false) LocalDate toDate,
-                        @ToolParam(description = ToolParamDescriptions.PAGE, required = false) Integer page,
-                        @ToolParam(description = ToolParamDescriptions.PAGE_SIZE, required = false) Integer pageSize) {
-                return hoSoDoiTuongToolHandler.query(doiTuong, hopDong, nhaThau, khuVuc, tinhThanh, trangThaiHopDong, coNhomUuTien, fromDate, toDate, page, pageSize);
-    }
-
     // ------------------------------------------------------------------ volume_tool
 
     @Tool(
@@ -401,19 +375,38 @@ public class McpToolDefinitions {
     @Tool(
             name = "doituong_tool",
             description = """
-                    Mục đích: Xem toàn cảnh MỘT đối tượng (trạm/tuyến) cụ thể trong một lần gọi duy nhất.
-                    Dùng khi: hỏi tổng quan về một trạm/tuyến cụ thể (sản lượng, hạng mục, tồn đọng, vướng mắc,
-                    phân công, khảo sát...), ví dụ "trạm HNI1335 đang thế nào", "tuyến X còn vướng gì không".
-                    Trả về: hopDong (tiến độ, theoBuoc), sanLuong (hangMucDoiTuong, danhSachDoiTuong), tramTon
-                    (đang tồn hay không, lý do), vuongMac (danhSach vướng mắc), phanCong (đang giao cho ai),
-                    bienBan (biên bản của hợp đồng chứa đối tượng) và hoSoDoiTuong (thuộc tính khảo sát).
-                    Với câu hỏi tổng hợp NHIỀU đối tượng hoặc xếp hạng, dùng các tool module riêng lẻ thay vì tool này.
+                    Mục đích: Thông tin đối tượng (trạm/tuyến) — toàn cảnh MỘT đối tượng, hoặc hồ sơ/mốc triển khai của NHIỀU đối tượng.
+                    Có 2 chế độ:
+                    1) Truyền doiTuong: toàn cảnh 1 trạm/tuyến trong một lần gọi, ví dụ "trạm HNI1335 đang thế nào", "tuyến X còn vướng gì không".
+                       Trả về: hopDong (tiến độ, theoBuoc), sanLuong (hangMucDoiTuong, danhSachDoiTuong), tramTon (đang tồn hay không, lý do),
+                       vuongMac (danhSach vướng mắc), phanCong (đang giao cho ai), bienBan (biên bản của hợp đồng chứa đối tượng)
+                       và hoSoDoiTuong.thuocTinh (bàn giao mặt bằng, vật tư A/B, ngayKhoiCong — null nghĩa là chưa khởi công).
+                    2) Không truyền doiTuong: hồ sơ nhiều đối tượng theo hopDong/nhaThau/khuVuc/tinhThanh/trangThaiHopDong/coNhomUuTien; chỉ trả hoSoDoiTuong gồm
+                       tongQuan (số đối tượng thiếu bàn giao mặt bằng/vật tư, cần có bộ lọc), chuaKhaoSat (chưa bàn giao mặt bằng, cần có bộ lọc),
+                       khaoSatXongChuaCoSanLuong (đã bàn giao mặt bằng nhưng chưa có sản lượng, fromDate/toDate lọc theo ngày bàn giao)
+                       và khoiCongTrongKy (đối tượng khởi công trong kỳ, fromDate/toDate lọc theo ngày khởi công; tổng số = khoiCongTrongKy.totalItems).
+                       Dùng cho câu hỏi như "trong kỳ/tháng này có bao nhiêu đối tượng khởi công", "hợp đồng X còn bao nhiêu trạm chưa khảo sát".
+                    Ngày khởi công = ngày ghi nhận sản lượng hoàn thành (done) đầu tiên của đối tượng trong hợp đồng.
+                    Câu hỏi về sản lượng, tồn đọng, vướng mắc, phân công của NHIỀU đối tượng hoặc xếp hạng: dùng tool module tương ứng.
                     """
     )
     public DoiTuongOverviewResponse doiTuong(
-            @ToolParam(description = ToolParamDescriptions.DOI_TUONG, required = true) String doiTuong,
+            @ToolParam(description = ToolParamDescriptions.DOI_TUONG + ". Bỏ trống để xem hồ sơ nhiều đối tượng (chế độ 2)", required = false) String doiTuong,
+            @ToolParam(description = ToolParamDescriptions.HOP_DONG, required = false) String hopDong,
+            @ToolParam(description = ToolParamDescriptions.NHA_THAU + ". Chỉ áp dụng khi không truyền doiTuong", required = false) String nhaThau,
+            @ToolParam(description = ToolParamDescriptions.KHU_VUC + ". Chỉ áp dụng khi không truyền doiTuong", required = false) String khuVuc,
+            @ToolParam(description = ToolParamDescriptions.TINH_THANH + ". Chỉ áp dụng khi không truyền doiTuong", required = false) String tinhThanh,
+            @ToolParam(description = "Bước trạng thái của đối tượng trong hợp đồng cần lọc: ID, mã hoặc tên (ví dụ Khảo sát, Thi công). Chỉ áp dụng khi không truyền doiTuong", required = false) String trangThaiHopDong,
+            @ToolParam(description = "true: chỉ đối tượng thuộc nhóm ưu tiên; false: chỉ đối tượng không thuộc nhóm ưu tiên; bỏ trống: tất cả. Chỉ áp dụng khi không truyền doiTuong", required = false) Boolean coNhomUuTien,
             @ToolParam(description = ToolParamDescriptions.FROM_DATE, required = false) LocalDate fromDate,
-            @ToolParam(description = ToolParamDescriptions.TO_DATE, required = false) LocalDate toDate) {
+            @ToolParam(description = ToolParamDescriptions.TO_DATE, required = false) LocalDate toDate,
+            @ToolParam(description = ToolParamDescriptions.PAGE + ". Chỉ áp dụng khi không truyền doiTuong", required = false) Integer page,
+            @ToolParam(description = ToolParamDescriptions.PAGE_SIZE + ". Chỉ áp dụng khi không truyền doiTuong", required = false) Integer pageSize) {
+        if (doiTuong == null || doiTuong.isBlank()) {
+            return DoiTuongOverviewResponse.builder()
+                    .hoSoDoiTuong(hoSoDoiTuongToolHandler.query(null, hopDong, nhaThau, khuVuc, tinhThanh, trangThaiHopDong, coNhomUuTien, fromDate, toDate, page, pageSize))
+                    .build();
+        }
         return DoiTuongOverviewResponse.builder()
                 .hopDong(hopDongToolHandler.query(doiTuong, null, null, null, null, null, null, null, null, null, null, null, null, null, fromDate, toDate, null))
                 .sanLuong(sanLuongToolHandler.query(doiTuong, null, null, null, null, fromDate, toDate, null, null, null, null, null, null, null, null))
@@ -421,7 +414,7 @@ public class McpToolDefinitions {
                 .tramTon(doiTuongTonToolHandler.query(doiTuong, null, null, null, null, null, null, null, null, null, null, null, null, fromDate, toDate))
                 .vuongMac(vuongMacToolHandler.query(doiTuong, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, fromDate, toDate))
                 .bienBan(bienBanToolHandler.query(null, null, null, null, null, doiTuong, fromDate, toDate, null, null))
-                .hoSoDoiTuong(hoSoDoiTuongToolHandler.query(doiTuong, null, null, null, null, null, null, fromDate, toDate, null, null))
+                .hoSoDoiTuong(hoSoDoiTuongToolHandler.query(doiTuong, hopDong, null, null, null, null, null, fromDate, toDate, null, null))
                 .build();
     }
 }

@@ -127,7 +127,7 @@ public class ToolTestController {
     }
 
     @GetMapping("/ho-so-doi-tuong")
-    @Operation(summary = "Test tool AI hosodoituong_tool")
+    @Operation(summary = "Test khối hoSoDoiTuong của tool AI doituong_tool")
     public ResponseEntity<ApiResponse<HoSoDoiTuongQueryResponse>> hoSoDoiTuong(
             @RequestParam(required = false) String maDoiTuong,
             @RequestParam(required = false) String maHopDong,

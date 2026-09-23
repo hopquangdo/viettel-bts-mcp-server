@@ -8,11 +8,13 @@ import vn.edu.huce.iic.bts_ops_platform.mcp.dto.doituong.DoiTuongInfo;
 import vn.edu.huce.iic.bts_ops_platform.mcp.dto.hopdong.HopDongInfo;
 import vn.edu.huce.iic.bts_ops_platform.mcp.dto.hosodoituong.HoSoDoiTuongChuaKhaoSatItem;
 import vn.edu.huce.iic.bts_ops_platform.mcp.dto.hosodoituong.HoSoDoiTuongKhaoSatXongChuaCoSanLuongItem;
+import vn.edu.huce.iic.bts_ops_platform.mcp.dto.hosodoituong.HoSoDoiTuongKhoiCongItem;
 import vn.edu.huce.iic.bts_ops_platform.mcp.dto.hosodoituong.HoSoDoiTuongQueryResponse;
 import vn.edu.huce.iic.bts_ops_platform.mcp.dto.hosodoituong.HoSoDoiTuongThuocTinhDto;
 import vn.edu.huce.iic.bts_ops_platform.mcp.dto.hosodoituong.HoSoDoiTuongTongQuanDto;
 import vn.edu.huce.iic.bts_ops_platform.mcp.dto.hosodoituong.ChuaKhaoSatProjection;
 import vn.edu.huce.iic.bts_ops_platform.mcp.dto.hosodoituong.KhaoSatXongChuaCoSanLuongProjection;
+import vn.edu.huce.iic.bts_ops_platform.mcp.dto.hosodoituong.KhoiCongTrongKyProjection;
 import vn.edu.huce.iic.bts_ops_platform.mcp.handler.HoSoDoiTuongToolHandler;
 import vn.edu.huce.iic.bts_ops_platform.mcp.repository.HoSoDoiTuongToolRepository;
 import vn.edu.huce.iic.bts_ops_platform.mcp.support.StatusLabels;
@@ -25,7 +27,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.UUID;
 
-/** Impl thật cho tool AI hosodoituong_tool — 1 method duy nhất, chỉ gọi HoSoDoiTuongToolRepository. */
+/** Impl khối hoSoDoiTuong của tool AI doituong_tool (trước là hosodoituong_tool) — 1 method duy nhất, chỉ gọi HoSoDoiTuongToolRepository. */
 @Component
 @RequiredArgsConstructor
 public class HoSoDoiTuongToolHandlerImpl implements HoSoDoiTuongToolHandler {
@@ -60,23 +62,28 @@ public class HoSoDoiTuongToolHandlerImpl implements HoSoDoiTuongToolHandler {
         LocalDate tuNgay = fromDate != null && toDate != null && fromDate.isAfter(toDate) ? toDate : fromDate;
         LocalDate denNgay = fromDate != null && toDate != null && fromDate.isAfter(toDate) ? fromDate : toDate;
 
-        // 4 khối độc lập chạy song song
+        // 5 khối độc lập chạy song song
         boolean coLoc = hopDongId != null || loc.coGiaTri();
         var fTongQuan = coLoc ? parallel.async(() -> computeTongQuan(hopDongId, loc)) : null;
         var fThuocTinh = doiTuongId != null ? parallel.async(() -> computeThuocTinh(doiTuongId, hopDongId)) : null;
         var fChuaKhaoSat = coLoc ? parallel.async(() -> computeChuaKhaoSat(hopDongId, loc, page, pageSize)) : null;
-        var fKhaoSatXong = parallel.async(() -> computeKhaoSatXongChuaCoSanLuong(hopDongId, loc, tuNgay, denNgay, page, pageSize));
+        // Hỏi 1 đối tượng cụ thể thì đã có thuocTinh (ngày bàn giao, ngayKhoiCong) — không liệt kê danh sách toàn hệ thống
+        boolean motDoiTuong = doiTuongId != null;
+        var fKhaoSatXong = !motDoiTuong ? parallel.async(() -> computeKhaoSatXongChuaCoSanLuong(hopDongId, loc, tuNgay, denNgay, page, pageSize)) : null;
+        var fKhoiCong = !motDoiTuong ? parallel.async(() -> computeKhoiCongTrongKy(hopDongId, loc, tuNgay, denNgay, page, pageSize)) : null;
 
         HoSoDoiTuongTongQuanDto tongQuan = fTongQuan != null ? McpParallel.get(fTongQuan) : null;
         HoSoDoiTuongThuocTinhDto thuocTinh = fThuocTinh != null ? McpParallel.get(fThuocTinh) : null;
         PagedResult<HoSoDoiTuongChuaKhaoSatItem> chuaKhaoSat = fChuaKhaoSat != null ? McpParallel.get(fChuaKhaoSat) : null;
-        PagedResult<HoSoDoiTuongKhaoSatXongChuaCoSanLuongItem> khaoSatXongChuaCoSanLuong = McpParallel.get(fKhaoSatXong);
+        PagedResult<HoSoDoiTuongKhaoSatXongChuaCoSanLuongItem> khaoSatXongChuaCoSanLuong = fKhaoSatXong != null ? McpParallel.get(fKhaoSatXong) : null;
+        PagedResult<HoSoDoiTuongKhoiCongItem> khoiCongTrongKy = fKhoiCong != null ? McpParallel.get(fKhoiCong) : null;
 
         return HoSoDoiTuongQueryResponse.builder()
                 .tongQuan(tongQuan)
                 .thuocTinh(thuocTinh)
                 .chuaKhaoSat(chuaKhaoSat)
                 .khaoSatXongChuaCoSanLuong(khaoSatXongChuaCoSanLuong)
+                .khoiCongTrongKy(khoiCongTrongKy)
                 .build();
     }
 
@@ -115,6 +122,7 @@ public class HoSoDoiTuongToolHandlerImpl implements HoSoDoiTuongToolHandler {
                 .trangThaiVatTuB(StatusLabels.vatTuB(row.getTrangThaiVatTuB()))
                 .ngayYeuCauVatTuB(row.getNgayYeuCauVatTuB())
                 .ngayHoanThanhVatTuB(row.getNgayHoanThanhVatTuB())
+                .ngayKhoiCong(row.getNgayKhoiCong())
                 .build();
     }
 
@@ -145,6 +153,24 @@ public class HoSoDoiTuongToolHandlerImpl implements HoSoDoiTuongToolHandler {
             item.setNgayBanGiaoMatBang(row.getNgayBanGiaoMatBang());
             item.setSoNgayKeTuBanGiao(row.getNgayBanGiaoMatBang() != null
                     ? ChronoUnit.DAYS.between(row.getNgayBanGiaoMatBang(), today) : 0);
+            return item;
+        }).getContent();
+        return PagedResult.of(items, resultPage.getNumber(), resultPage.getSize(), resultPage.getTotalElements());
+    }
+
+    private PagedResult<HoSoDoiTuongKhoiCongItem> computeKhoiCongTrongKy(UUID hopDongId, Loc loc,
+                                                                         LocalDate fromDate, LocalDate toDate,
+                                                                         Integer page, Integer pageSize) {
+        Page<KhoiCongTrongKyProjection> resultPage = repository.khoiCongTrongKy(
+                hopDongId, loc.nhaThauId(), loc.khuVucId(), loc.tinhThanhId(), loc.trangThaiIds(), loc.coNhomUuTien(), fromDate, toDate,
+                PagingUtil.toPageRequest(page, pageSize, PagingUtil.DEFAULT_PAGE_SIZE, PagingUtil.MAX_PAGE_SIZE));
+        List<HoSoDoiTuongKhoiCongItem> items = resultPage.map(row -> {
+            HoSoDoiTuongKhoiCongItem item = new HoSoDoiTuongKhoiCongItem();
+            item.setDoiTuong(DoiTuongInfo.of(row.getMaDoiTuong(), row.getTenDoiTuong()));
+            item.setMaHopDong(row.getMaHopDong());
+            item.setKhuVuc(row.getKhuVuc());
+            item.setNhaThau(row.getNhaThau());
+            item.setNgayKhoiCong(row.getNgayKhoiCong());
             return item;
         }).getContent();
         return PagedResult.of(items, resultPage.getNumber(), resultPage.getSize(), resultPage.getTotalElements());

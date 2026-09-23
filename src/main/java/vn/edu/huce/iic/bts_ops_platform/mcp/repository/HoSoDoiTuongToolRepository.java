@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import vn.edu.huce.iic.bts_ops_platform.mcp.dto.hosodoituong.ChuaKhaoSatProjection;
 import vn.edu.huce.iic.bts_ops_platform.mcp.dto.hosodoituong.KhaoSatXongChuaCoSanLuongProjection;
+import vn.edu.huce.iic.bts_ops_platform.mcp.dto.hosodoituong.KhoiCongTrongKyProjection;
 import vn.edu.huce.iic.bts_ops_platform.mcp.dto.hosodoituong.ThuocTinhProjection;
 import vn.edu.huce.iic.bts_ops_platform.mcp.dto.hosodoituong.TongQuanProjection;
 import vn.edu.huce.iic.bts_ops_platform.mcp.entity.doituong.HopDongDoiTuong;
@@ -15,7 +16,7 @@ import java.util.UUID;
 
 /**
  * Repository cho hosodoituong_tool — chỉ dùng các cột THỰC CÓ trên hop_dong_doi_tuong
- * (ngay_ban_giao_mat_bang, trang_thai_vat_tu_a/b, ngay_*_vat_tu_b, san_luong_hieu_luc). KHÔNG có
+ * (ngay_ban_giao_mat_bang, trang_thai_vat_tu_a/b, ngay_*_vat_tu_b, san_luong_hieu_luc, ngay_khoi_cong). KHÔNG có
  * loại cột / chiều cao / ảnh thi công / ngày khảo sát trong DB.
  */
 public interface HoSoDoiTuongToolRepository extends JpaRepository<HopDongDoiTuong, UUID> {
@@ -43,7 +44,8 @@ public interface HoSoDoiTuongToolRepository extends JpaRepository<HopDongDoiTuon
                    COALESCE(h.ten, h.ma_hop_dong) AS tenHopDong,
                    d.ngay_ban_giao_mat_bang AS ngayBanGiaoMatBang,
                    d.trang_thai_vat_tu_a AS trangThaiVatTuA, d.trang_thai_vat_tu_b AS trangThaiVatTuB,
-                   d.ngay_yeu_cau_vat_tu_b AS ngayYeuCauVatTuB, d.ngay_hoan_thanh_vat_tu_b AS ngayHoanThanhVatTuB
+                   d.ngay_yeu_cau_vat_tu_b AS ngayYeuCauVatTuB, d.ngay_hoan_thanh_vat_tu_b AS ngayHoanThanhVatTuB,
+                   d.ngay_khoi_cong AS ngayKhoiCong
             FROM hop_dong_doi_tuong d
             INNER JOIN hop_dong h ON h.id = d.hop_dong_id AND h.ngay_xoa IS NULL AND h.hoat_dong = TRUE
             LEFT JOIN doi_tuong_quan_ly dt ON dt.id = d.doi_tuong_quan_ly_id AND dt.ngay_xoa IS NULL
@@ -121,6 +123,46 @@ public interface HoSoDoiTuongToolRepository extends JpaRepository<HopDongDoiTuon
               AND (CAST(:coNhomUuTien AS boolean) IS NULL OR (d.hop_dong_nhom_uu_tien_id IS NOT NULL) = CAST(:coNhomUuTien AS boolean))
                         """, nativeQuery = true)
         Page<KhaoSatXongChuaCoSanLuongProjection> khaoSatXongChuaCoSanLuong(@Param("hopDongId") UUID hopDongId, @Param("nhaThauId") UUID nhaThauId, @Param("khuVucId") UUID khuVucId, @Param("tinhThanhId") UUID tinhThanhId,
+            @Param("trangThaiIds") String trangThaiIds, @Param("coNhomUuTien") Boolean coNhomUuTien,
+            @Param("fromDate") java.time.LocalDate fromDate, @Param("toDate") java.time.LocalDate toDate, Pageable pageable);
+
+    /** Đối tượng khởi công trong kỳ: ngay_khoi_cong (ngày ghi nhận sản lượng done đầu tiên, business-api denormalize) nằm trong [fromDate, toDate]. */
+    @Query(value = """
+            SELECT dt.ma AS maDoiTuong, dt.ten AS tenDoiTuong, h.ma_hop_dong AS maHopDong,
+                   kv.ten AS khuVuc, nd.ho_ten AS nhaThau, d.ngay_khoi_cong AS ngayKhoiCong
+            FROM hop_dong_doi_tuong d
+            INNER JOIN hop_dong h ON h.id = d.hop_dong_id AND h.ngay_xoa IS NULL AND h.hoat_dong = TRUE
+            LEFT JOIN doi_tuong_quan_ly dt ON dt.id = d.doi_tuong_quan_ly_id AND dt.ngay_xoa IS NULL
+            LEFT JOIN khu_vuc kv ON kv.id = d.khu_vuc_id
+            LEFT JOIN nguoi_dung nd ON nd.id = d.nha_thau_id
+            WHERE d.ngay_xoa IS NULL AND d.hoat_dong = TRUE
+              AND d.ngay_khoi_cong IS NOT NULL
+              AND (CAST(:fromDate AS date) IS NULL OR d.ngay_khoi_cong >= CAST(:fromDate AS date))
+              AND (CAST(:toDate AS date) IS NULL OR d.ngay_khoi_cong <= CAST(:toDate AS date))
+              AND (CAST(:hopDongId AS uuid) IS NULL OR d.hop_dong_id = CAST(:hopDongId AS uuid))
+              AND (CAST(:nhaThauId AS uuid) IS NULL OR d.nha_thau_id = CAST(:nhaThauId AS uuid))
+              AND (CAST(:khuVucId AS uuid) IS NULL OR d.khu_vuc_id = CAST(:khuVucId AS uuid))
+              AND (CAST(:tinhThanhId AS uuid) IS NULL OR d.tinh_thanh_id = CAST(:tinhThanhId AS uuid))
+              AND (CAST(:trangThaiIds AS text) IS NULL OR d.trang_thai_hop_dong_id = ANY(CAST(string_to_array(:trangThaiIds, ',') AS uuid[])))
+              AND (CAST(:coNhomUuTien AS boolean) IS NULL OR (d.hop_dong_nhom_uu_tien_id IS NOT NULL) = CAST(:coNhomUuTien AS boolean))
+            ORDER BY d.ngay_khoi_cong DESC, dt.ma
+            """,
+            countQuery = """
+            SELECT COUNT(*)
+            FROM hop_dong_doi_tuong d
+            INNER JOIN hop_dong h ON h.id = d.hop_dong_id AND h.ngay_xoa IS NULL AND h.hoat_dong = TRUE
+            WHERE d.ngay_xoa IS NULL AND d.hoat_dong = TRUE
+              AND d.ngay_khoi_cong IS NOT NULL
+              AND (CAST(:fromDate AS date) IS NULL OR d.ngay_khoi_cong >= CAST(:fromDate AS date))
+              AND (CAST(:toDate AS date) IS NULL OR d.ngay_khoi_cong <= CAST(:toDate AS date))
+              AND (CAST(:hopDongId AS uuid) IS NULL OR d.hop_dong_id = CAST(:hopDongId AS uuid))
+              AND (CAST(:nhaThauId AS uuid) IS NULL OR d.nha_thau_id = CAST(:nhaThauId AS uuid))
+              AND (CAST(:khuVucId AS uuid) IS NULL OR d.khu_vuc_id = CAST(:khuVucId AS uuid))
+              AND (CAST(:tinhThanhId AS uuid) IS NULL OR d.tinh_thanh_id = CAST(:tinhThanhId AS uuid))
+              AND (CAST(:trangThaiIds AS text) IS NULL OR d.trang_thai_hop_dong_id = ANY(CAST(string_to_array(:trangThaiIds, ',') AS uuid[])))
+              AND (CAST(:coNhomUuTien AS boolean) IS NULL OR (d.hop_dong_nhom_uu_tien_id IS NOT NULL) = CAST(:coNhomUuTien AS boolean))
+            """, nativeQuery = true)
+    Page<KhoiCongTrongKyProjection> khoiCongTrongKy(@Param("hopDongId") UUID hopDongId, @Param("nhaThauId") UUID nhaThauId, @Param("khuVucId") UUID khuVucId, @Param("tinhThanhId") UUID tinhThanhId,
             @Param("trangThaiIds") String trangThaiIds, @Param("coNhomUuTien") Boolean coNhomUuTien,
             @Param("fromDate") java.time.LocalDate fromDate, @Param("toDate") java.time.LocalDate toDate, Pageable pageable);
 
