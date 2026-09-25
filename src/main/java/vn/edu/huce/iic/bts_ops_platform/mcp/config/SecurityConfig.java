@@ -47,6 +47,9 @@ public class SecurityConfig {
 
             "/actuator/health",
 
+            // Các endpoint test tool được bảo vệ bởi McpApiKeyFilter.
+            "/api/v1/tools/**",
+
             // MCP tool server: không qua Spring Security thường; McpApiKeyFilter bắt buộc X-API-Key
             // (fail-closed) và đọc danh tính người dùng từ header X-User-* (McpUserContext).
             "/mcp/**"

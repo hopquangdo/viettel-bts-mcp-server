@@ -45,6 +45,9 @@ public class McpApiKeyFilter extends OncePerRequestFilter {
     @Value("${app.mcp.api-key:}")
     private String apiKey;
 
+    @Value("${app.mcp.auth-enabled:true}")
+    private boolean authEnabled;
+
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String uri = request.getRequestURI();
@@ -56,6 +59,10 @@ public class McpApiKeyFilter extends OncePerRequestFilter {
             @NonNull HttpServletRequest request,
             @NonNull HttpServletResponse response,
             @NonNull FilterChain filterChain) throws ServletException, IOException {
+        if (!authEnabled) {
+            filterChain.doFilter(request, response);
+            return;
+        }
         if (!StringUtils.hasText(apiKey)) {
             log.warn("MCP request bị từ chối: chưa cấu hình app.mcp.api-key (fail-closed)");
             writeError(response, HttpServletResponse.SC_SERVICE_UNAVAILABLE,

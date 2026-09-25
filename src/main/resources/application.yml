@@ -36,6 +36,7 @@ app:
     # Tạm thời cho phép MCP đọc toàn bộ dữ liệu; bật lại bằng APP_DATA_SCOPE_ENABLED=true.
     enabled: false
   mcp:
+    auth-enabled: ${APP_MCP_AUTH_ENABLED:true}
     api-key: ${APP_MCP_API_KEY:}
   cache:
     # RedisCacheService (CanBoComponent, NhaThauResolver...). Đặt APP_CACHE_ENABLED=false để tắt cache.
