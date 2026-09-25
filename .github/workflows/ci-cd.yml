@@ -1,8 +1,10 @@
-# CI/CD: test (nhánh dev + main) -> build image (chỉ main) -> deploy lên k3s (chỉ main).
+# CI/CD: test (nhánh dev + main) -> build image (dev + main) -> deploy lên k3s:
+#   main -> namespace viettel-prod (vietdemo.com), dev -> namespace viettel-dev (qwen.vietdemo.com).
 #
 # Secrets cần có ở repo này (Settings > Secrets and variables > Actions, environment "production"):
 #   SSH_HOST, SSH_PORT (mặc định 22), SSH_USER, SSH_PRIVATE_KEY   vào server chạy k3s
-#   KUBE_NAMESPACE                                                (tùy chọn) mặc định viettel-prod
+#   KUBE_NAMESPACE                                                (tùy chọn) namespace cho main, mặc định viettel-prod;
+#                                                                 nhánh dev luôn deploy vào viettel-dev
 #   GHCR_USERNAME, GHCR_TOKEN                                     (tùy chọn) PAT push+pull (write:packages + read:packages); nếu có sẽ dùng
 #                                                                 thay GITHUB_TOKEN để đẩy image (cần khi package chưa gắn với repo)
 #
@@ -21,10 +23,10 @@ on:
     branches: [dev, main]
   workflow_dispatch:
 
-# Không hủy lần chạy đang deploy ở main.
+# Không hủy lần chạy đang deploy ở main/dev.
 concurrency:
   group: ci-cd-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' && github.ref != 'refs/heads/dev' }}
 
 permissions:
   contents: read
@@ -55,7 +57,7 @@ jobs:
     name: Build & push image
     runs-on: ubuntu-latest
     needs: test
-    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev') && github.event_name != 'pull_request'
     timeout-minutes: 30
     outputs:
       # Chỉ truyền tag: GitHub loại bỏ job output nếu nó chứa chuỗi trùng giá trị một secret (tên image chứa tên tài khoản).
@@ -97,7 +99,7 @@ jobs:
     name: Deploy to k3s
     runs-on: ubuntu-latest
     needs: build
-    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev') && github.event_name != 'pull_request'
     environment: production
     concurrency:
       group: k8s-deploy-${{ github.repository }}
@@ -113,7 +115,7 @@ jobs:
       - name: Set image and wait for rollout
         uses: appleboy/ssh-action@v1.2.0
         env:
-          NS: ${{ secrets.KUBE_NAMESPACE || 'viettel-prod' }}
+          NS: ${{ github.ref == 'refs/heads/main' && (secrets.KUBE_NAMESPACE || 'viettel-prod') || 'viettel-dev' }}
           IMAGE: ${{ steps.img.outputs.ref }}
           DEPLOYMENT: ${{ env.DEPLOYMENT }}
           AI_ASSISTANT_DEPLOYMENT: ${{ env.AI_ASSISTANT_DEPLOYMENT }}
