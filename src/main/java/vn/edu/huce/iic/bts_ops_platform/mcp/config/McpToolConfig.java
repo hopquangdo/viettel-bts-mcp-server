@@ -5,16 +5,18 @@ import org.springframework.ai.tool.ToolCallbackProvider;
 import org.springframework.ai.tool.method.MethodToolCallbackProvider;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import vn.edu.huce.iic.bts_ops_platform.mcp.definitions.McpToolDefinitions;
+import vn.edu.huce.iic.bts_ops_platform.mcp.definitions.McpToolGroup;
 
-/** common/tools: toàn bộ MCP tool nghiệp vụ khai báo trong 1 class {@link McpToolDefinitions}. */
+import java.util.List;
+
+/** common/tools: gom MCP tool nghiệp vụ từ mọi bean {@link McpToolGroup} (mỗi module 1 class định nghĩa tool). */
 @Configuration
 public class McpToolConfig {
 
     @Bean
-    public ToolCallbackProvider mcpTools(McpToolDefinitions mcpToolDefinitions) {
+    public ToolCallbackProvider mcpTools(List<McpToolGroup> toolGroups) {
         ToolCallback[] rawCallbacks = MethodToolCallbackProvider.builder()
-                .toolObjects(mcpToolDefinitions)
+                .toolObjects(toolGroups.toArray())
                 .build()
                 .getToolCallbacks();
         ToolCallback[] loggedCallbacks = new ToolCallback[rawCallbacks.length];

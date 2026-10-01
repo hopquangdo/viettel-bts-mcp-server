@@ -36,7 +36,7 @@ import java.time.LocalDate;
  */
 @Service
 @RequiredArgsConstructor
-public class McpToolDefinitions {
+public class McpToolDefinitions implements McpToolGroup {
 
     private final SanLuongToolHandler sanLuongToolHandler;
     private final HopDongToolHandler hopDongToolHandler;
@@ -50,45 +50,6 @@ public class McpToolDefinitions {
     private final NganHoToolHandler nganHoToolHandler;
     private final HoSoDoiTuongToolHandler hoSoDoiTuongToolHandler;
 
-
-    // ------------------------------------------------------------------ sanluong_tool
-
-    @Tool(
-            name = "sanluong_tool",
-            description = """
-                    Mục đích: Báo cáo sản lượng theo khoảng thời gian đã chọn, lọc theo đối tượng, hợp đồng,
-                    nhà thầu hoặc khu vực.
-                    Dùng khi: cần tổng hợp sản lượng, xếp hạng, xu hướng hoặc tìm nhà thầu đã/chưa báo trong kỳ.
-                    Trả về: summary, progress, trend, ranking theo nhaThau/khuVuc/tinh/hopDong/loaiHopDong/doiTuong (bảng cùng cấp với bộ lọc được bỏ; sắp xếp bằng xepHangTheo),
-                    periodTrend (giá trị sản lượng theo từng kỳ con), nhaThauChuaBaoTrongKy (nhà thầu CHƯA có sản lượng 'done' trong kỳ)
-                    và nhaThauDaBaoTrongKy (nhà thầu ĐÃ có sản lượng 'done' trong kỳ, kèm giaTriDaBao). Muốn biết "nhà thầu nào đã báo sản lượng
-                    hôm nay": gọi với fromDate=toDate=hôm nay rồi đọc nhaThauDaBaoTrongKy.
-                    Ngoài ra: doiTuongChuaCoSanLuong (đối tượng/trạm nào chưa ghi nhận sản lượng trong khoảng ngày, phân trang) và nghiemThu
-                    (số hạng mục và giá trị đã duyệt = nghiệm thu đạt, không đạt kèm lý do, chờ nghiệm thu). summary.periodValue là tiền đã báo.
-                    Khi doiTuong là mã/id của đối tượng cụ thể (trạm, tuyến): có hangMucDoiTuong (hạng mục đã làm và chưa làm, tối đa 5 đối tượng).
-                    Luôn có danhSachDoiTuong: bảng từng đối tượng (SL tổng, SL hôm nay, thi công gần nhất, tỉnh, hạng mục đã làm/tổng).
-                    Quy tắc xếp hạng: bảng xếp hạng bị bỏ bằng null khi bộ lọc đứng cùng cấp với bảng đó (vd hopDong -> xepHangHopDong null, khuVuc -> xepHangKhuVuc null).
-                    Nếu bộ lọc không cùng cấp thì bảng vẫn trả về danh sách, có thể rỗng [] thay vì null. Với lọc 1 đối tượng cụ thể, bỏ mọi bảng xếp hạng.
-                    """
-    )
-        public SanLuongQueryResponse sanLuong(
-            @ToolParam(description = ToolParamDescriptions.DOI_TUONG, required = false) String doiTuong,
-            @ToolParam(description = ToolParamDescriptions.HOP_DONG, required = false) String hopDong,
-            @ToolParam(description = ToolParamDescriptions.NHA_THAU, required = false) String nhaThau,
-            @ToolParam(description = ToolParamDescriptions.KHU_VUC, required = false) String khuVuc,
-            @ToolParam(description = ToolParamDescriptions.TINH_THANH, required = false) String tinhThanh,
-            @ToolParam(description = ToolParamDescriptions.FROM_DATE, required = false) LocalDate fromDate,
-            @ToolParam(description = ToolParamDescriptions.TO_DATE, required = false) LocalDate toDate,
-            @ToolParam(description = "Ngưỡng % hoàn thành hạng mục: đối tượng đang thi công dưới mức này tính vào lowCompletionCount, mặc định 50", required = false) Double nguongHoanThanhThap,
-            @ToolParam(description = "false: chỉ liệt kê đối tượng đã có sản lượng trong kỳ ở topDoiTuong; bỏ trống hoặc true: gồm cả đối tượng chưa có sản lượng", required = false) Boolean includeWithoutOutput,
-            @ToolParam(description = "Sắp xếp danhSachDoiTuong (bảng từng đối tượng: mã, tỉnh, khu vực, hợp đồng, nhà thầu, SL tổng, SL hôm nay, thi công gần nhất, hạng mục, vướng mắc; chỉ gồm đối tượng có bản ghi trong kỳ, trừ khi includeWithoutOutput=true; phân trang theo page/pageSize) giảm dần theo: latest (thi công gần nhất, mặc định), periodValue (giá trị trong kỳ), totalValue (SL tổng), todayValue (SL hôm nay)", required = false) String sapXep,
-            @ToolParam(description = "Loại hợp đồng (lĩnh vực) cần lọc: ID, mã hoặc tên", required = false) String loaiHopDong,
-            @ToolParam(description = "Sắp xếp các bảng xếp hạng (nhaThau, khuVuc, tinh, hopDong, loaiHopDong) theo: giaTri (mặc định), hoanThanh (% hoàn thành), soDoiTuong, vuongMac. Lọc theo cấp nào thì bảng cấp đó được bỏ (vd lọc khuVuc thì không có khuVuc, chỉ có tinh, hopDong, nhaThau… trong khu vực đó); lọc 1 đối tượng cụ thể thì không có bảng xếp hạng nào, chỉ có hangMucDoiTuong", required = false) String xepHangTheo,
-            @ToolParam(description = "true: xếp hạng tăng dần (mặc định giảm dần)", required = false) Boolean tangDan,
-            @ToolParam(description = ToolParamDescriptions.PAGE, required = false) Integer page,
-            @ToolParam(description = ToolParamDescriptions.PAGE_SIZE, required = false) Integer pageSize) {
-        return sanLuongToolHandler.query(doiTuong, hopDong, nhaThau, khuVuc, tinhThanh, fromDate, toDate, page, pageSize, nguongHoanThanhThap, includeWithoutOutput, sapXep, loaiHopDong, xepHangTheo, tangDan);
-    }
 
     // ------------------------------------------------------------------ hopdong_tool
 
