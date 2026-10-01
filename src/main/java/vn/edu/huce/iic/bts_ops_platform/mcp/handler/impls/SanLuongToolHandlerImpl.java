@@ -30,6 +30,7 @@ import vn.edu.huce.iic.bts_ops_platform.mcp.dto.doituong.DoiTuongInfo;
 import vn.edu.huce.iic.bts_ops_platform.mcp.dto.hopdong.HopDongInfo;
 import vn.edu.huce.iic.bts_ops_platform.mcp.dto.khuvuc.KhuVucInfo;
 import vn.edu.huce.iic.bts_ops_platform.mcp.handler.SanLuongToolHandler;
+import vn.edu.huce.iic.bts_ops_platform.mcp.handler.SanLuongToolHandler.Block;
 import vn.edu.huce.iic.bts_ops_platform.mcp.repository.SanLuongToolRepository;
 import vn.edu.huce.iic.bts_ops_platform.mcp.components.NhaThauComponent;
 import vn.edu.huce.iic.bts_ops_platform.mcp.support.NumberUtil;
@@ -50,6 +51,7 @@ import java.util.LinkedHashMap;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -90,7 +92,16 @@ public class SanLuongToolHandlerImpl implements SanLuongToolHandler {
     public SanLuongQueryResponse query(String doiTuong, String hopDong, String nhaThau,
                                        String khuVuc, String tinhThanh, LocalDate fromDateIn, LocalDate toDateIn,
                                        Integer page, Integer pageSize, Double nguongHoanThanhThap, Boolean includeWithoutOutput,
-                                       String sapXep, String loaiHopDong, String xepHangTheo, Boolean tangDan) {
+                                       String sapXep, String loaiHopDong, String xepHangTheo, Boolean tangDan, Set<Block> blocks) {
+        boolean canTongQuan = blocks.contains(Block.TONG_QUAN);
+        boolean canXepHang = blocks.contains(Block.XEP_HANG);
+        boolean canXuHuong = blocks.contains(Block.XU_HUONG);
+        boolean canNhaThauBao = blocks.contains(Block.NHA_THAU_BAO);
+        boolean canNghiemThu = blocks.contains(Block.NGHIEM_THU);
+        boolean canDoiTuongChuaCo = blocks.contains(Block.DOI_TUONG_CHUA_CO);
+        // progressBundle gom nhóm đối tượng (G), top đối tượng (T) và đối tượng chưa có sản lượng (C) trong 1 câu
+        boolean canBundle = canTongQuan || canXepHang || canXuHuong || canDoiTuongChuaCo;
+
         LocalDate toDate = toDateIn != null ? toDateIn : LocalDate.now();
         // Không truyền khoảng ngày nào: lấy TOÀN BỘ thời gian (khớp trang Sản lượng của FE, REST tong-hop không giới hạn ngày);
         // chỉ truyền 1 đầu thì đầu còn lại giữ cách cũ (đến hôm nay / lùi 30 ngày).
@@ -129,177 +140,184 @@ public class SanLuongToolHandlerImpl implements SanLuongToolHandler {
         String bucketFrom = buckets.stream().map(x -> x[0].toString()).collect(java.util.stream.Collectors.joining(","));
         String bucketTo = buckets.stream().map(x -> x[1].toString()).collect(java.util.stream.Collectors.joining(","));
 
-        // 7 truy vấn độc lập: chạy song song, độ trễ = câu chậm nhất thay vì tổng các câu
-        var fAggregate = parallel.async(() -> sanLuongToolRepository.aggregateTongHop(fromDate, toDate,
+        // các truy vấn độc lập chạy song song (độ trễ = câu chậm nhất); khối không được yêu cầu thì không chạy truy vấn của nó
+        var fAggregate = canTongQuan ? parallel.async(() -> sanLuongToolRepository.aggregateTongHop(fromDate, toDate,
                 previousPeriod.fromDate(), previousPeriod.toDate(), today,
-                nhaThauId, hopDongId, doiTuongIds, khuVucId, resolvedTinhThanhId, loaiHopDongId));
+                nhaThauId, hopDongId, doiTuongIds, khuVucId, resolvedTinhThanhId, loaiHopDongId)) : null;
         var pageNt = PagingUtil.toPageRequest(page, pageSize, PagingUtil.DEFAULT_PAGE_SIZE, PagingUtil.MAX_PAGE_SIZE);
         // nhóm đối tượng + top đối tượng + trang đối tượng chưa có sản lượng: 1 câu, bảng đối tượng chỉ tính 1 lần
-        var fBundle = parallel.async(() -> sanLuongToolRepository.progressBundle(chiCoSanLuong, fromDate, toDate,
-                nhaThauId, hopDongId, doiTuongIds, khuVucId, resolvedTinhThanhId, loaiHopDongId, pageNt.getPageSize(), pageNt.getOffset()));
-        var fIssue = parallel.async(() -> sanLuongToolRepository.demVuongMacMoTrongKy(
+        var fBundle = canBundle ? parallel.async(() -> sanLuongToolRepository.progressBundle(chiCoSanLuong, fromDate, toDate,
+                nhaThauId, hopDongId, doiTuongIds, khuVucId, resolvedTinhThanhId, loaiHopDongId, pageNt.getPageSize(), pageNt.getOffset())) : null;
+        var fIssue = canTongQuan ? parallel.async(() -> sanLuongToolRepository.demVuongMacMoTrongKy(
                 fromDate.atStartOfDay(VietnamDateUtils.ZONE).toInstant(),
                 toDate.plusDays(1).atStartOfDay(VietnamDateUtils.ZONE).toInstant(),
-                nhaThauId, hopDongId, doiTuongIds, khuVucId, resolvedTinhThanhId, loaiHopDongId));
-        var fCells = parallel.async(() -> sanLuongToolRepository.sanLuongTheoKy(bucketFrom, bucketTo,
-                nhaThauId, hopDongId, doiTuongIds, khuVucId, resolvedTinhThanhId, loaiHopDongId));
+                nhaThauId, hopDongId, doiTuongIds, khuVucId, resolvedTinhThanhId, loaiHopDongId)) : null;
+        var fCells = canXuHuong ? parallel.async(() -> sanLuongToolRepository.sanLuongTheoKy(bucketFrom, bucketTo,
+                nhaThauId, hopDongId, doiTuongIds, khuVucId, resolvedTinhThanhId, loaiHopDongId)) : null;
         java.time.Instant ntFrom = fromDateIn != null ? fromDateIn.atStartOfDay(VietnamDateUtils.ZONE).toInstant() : null;
         java.time.Instant ntTo = toDateIn != null ? toDateIn.plusDays(1).atStartOfDay(VietnamDateUtils.ZONE).toInstant() : null;
-        var fNtKhongDat = parallel.async(() -> sanLuongToolRepository.findNghiemThuKhongDat(nhaThauId, hopDongId, doiTuongIds, khuVucId,
-                resolvedTinhThanhId, loaiHopDongId, ntFrom, ntTo, pageNt));
-        var fNtThongKe = parallel.async(() -> sanLuongToolRepository.thongKeNghiemThu(nhaThauId, hopDongId, doiTuongIds, khuVucId,
-                resolvedTinhThanhId, loaiHopDongId, ntFrom, ntTo));
-        var fNtCho = parallel.async(() -> sanLuongToolRepository.thongKeChoNghiemThu(nhaThauId, hopDongId, doiTuongIds, khuVucId,
-                resolvedTinhThanhId, loaiHopDongId, fromDateIn, toDateIn));
-        var fChuaBao = parallel.async(() -> sanLuongToolRepository.findNhaThauChuaBaoTrongKy(fromDate, toDate,
-                nhaThauId, hopDongId, doiTuongIds, khuVucId, resolvedTinhThanhId, loaiHopDongId, pageNt));
-        var fDaBao = parallel.async(() -> sanLuongToolRepository.findNhaThauDaBaoTrongKy(fromDate, toDate,
-                nhaThauId, hopDongId, doiTuongIds, khuVucId, resolvedTinhThanhId, loaiHopDongId, pageNt));
+        var fNtKhongDat = canNghiemThu ? parallel.async(() -> sanLuongToolRepository.findNghiemThuKhongDat(nhaThauId, hopDongId, doiTuongIds, khuVucId,
+                resolvedTinhThanhId, loaiHopDongId, ntFrom, ntTo, pageNt)) : null;
+        var fNtThongKe = canNghiemThu ? parallel.async(() -> sanLuongToolRepository.thongKeNghiemThu(nhaThauId, hopDongId, doiTuongIds, khuVucId,
+                resolvedTinhThanhId, loaiHopDongId, ntFrom, ntTo)) : null;
+        var fNtCho = canNghiemThu ? parallel.async(() -> sanLuongToolRepository.thongKeChoNghiemThu(nhaThauId, hopDongId, doiTuongIds, khuVucId,
+                resolvedTinhThanhId, loaiHopDongId, fromDateIn, toDateIn)) : null;
+        var fChuaBao = canNhaThauBao ? parallel.async(() -> sanLuongToolRepository.findNhaThauChuaBaoTrongKy(fromDate, toDate,
+                nhaThauId, hopDongId, doiTuongIds, khuVucId, resolvedTinhThanhId, loaiHopDongId, pageNt)) : null;
+        var fDaBao = canNhaThauBao ? parallel.async(() -> sanLuongToolRepository.findNhaThauDaBaoTrongKy(fromDate, toDate,
+                nhaThauId, hopDongId, doiTuongIds, khuVucId, resolvedTinhThanhId, loaiHopDongId, pageNt)) : null;
 
         // danh sách từng đối tượng (đọc thêm lũy kế sản lượng): chạy song song với các truy vấn khác
-        var fDanhSach = parallel.async(() -> sanLuongToolRepository.danhSachDoiTuong(Boolean.TRUE.equals(includeWithoutOutput) ? Boolean.TRUE : null,
+        var fDanhSach = blocks.contains(Block.DANH_SACH_DOI_TUONG)
+                ? parallel.async(() -> sanLuongToolRepository.danhSachDoiTuong(Boolean.TRUE.equals(includeWithoutOutput) ? Boolean.TRUE : null,
                         chuanHoaSapXep(sapXep), today, fromDate, toDate, nhaThauId, hopDongId, doiTuongIds, khuVucId, resolvedTinhThanhId, loaiHopDongId,
-                        pageNt.getPageSize(), pageNt.getOffset()));
+                        pageNt.getPageSize(), pageNt.getOffset()))
+                : null;
 
-        // hạng mục của đối tượng: chỉ khi truyền doiTuong (mã/id); nếu là loại đối tượng thì không khớp đối tượng cụ thể nào nên rỗng
-        var fHangMuc = doiTuongIds != null
+        // hạng mục của đối tượng: chỉ khi truyền doiTuong (mã/id); nếu là loại đối tượng thì không khớp đối tượng cụ thể nào nên rỗng.
+        // Khối xếp hạng cũng cần để biết có lọc 1 đối tượng cụ thể không (khi đó bỏ mọi bảng xếp hạng).
+        var fHangMuc = doiTuongIds != null && (blocks.contains(Block.HANG_MUC) || canXepHang)
                 ? parallel.async(() -> sanLuongToolRepository.hangMucCuaDoiTuong(doiTuongIds))
                 : null;
 
-        var aggregate = McpParallel.get(fAggregate).orElse(null);
-        int totalObjects = aggregate != null ? NumberUtil.nz(aggregate.getTotalDisplayed()) : 0;
-        int objectsWithOutput = aggregate != null ? NumberUtil.nz(aggregate.getWithOutput()) : 0;
-        BigDecimal periodValue = aggregate != null ? NumberUtil.nz(aggregate.getPeriodTotal()) : BigDecimal.ZERO;
-        BigDecimal todayValue = aggregate != null ? NumberUtil.nz(aggregate.getTodayTotal()) : BigDecimal.ZERO;
+        var response = SanLuongQueryResponse.builder();
 
-        var bundle = McpParallel.get(fBundle);
-        List<ProgressGroupProjection> groups = bundle.stream().filter(r -> "G".equals(r.getKind())).map(r -> (ProgressGroupProjection) r).toList();
-        List<DoiTuongProgressProjection> topDoiTuong = bundle.stream().filter(r -> "T".equals(r.getKind())).map(r -> (DoiTuongProgressProjection) r).toList();
-        long soDoiTuong = groups.stream().mapToLong(ProgressGroupProjection::getN).sum();
-        int issueCount = (int) (long) McpParallel.get(fIssue);
+        var bundle = canBundle ? McpParallel.get(fBundle) : null;
+        List<ProgressGroupProjection> groups = bundle == null ? List.of()
+                : bundle.stream().filter(r -> "G".equals(r.getKind())).map(r -> (ProgressGroupProjection) r).toList();
 
-        OutputSummaryDto summary = OutputSummaryDto.builder()
-                .totalObjects(totalObjects)
-                .objectsWithOutput(objectsWithOutput)
-                .objectsWithoutOutput(Math.max(totalObjects - objectsWithOutput, 0))
-                .periodValue(periodValue)
-                .todayValue(todayValue)
-                .averageValuePerObject(totalObjects > 0
-                        ? periodValue.divide(BigDecimal.valueOf(totalObjects), 2, RoundingMode.HALF_UP)
-                        : BigDecimal.ZERO)
-                .unit("VNĐ")
-                .openIssueCount(issueCount)
-                .build();
+        if (canTongQuan) {
+            var aggregate = McpParallel.get(fAggregate).orElse(null);
+            int totalObjects = aggregate != null ? NumberUtil.nz(aggregate.getTotalDisplayed()) : 0;
+            int objectsWithOutput = aggregate != null ? NumberUtil.nz(aggregate.getWithOutput()) : 0;
+            BigDecimal periodValue = aggregate != null ? NumberUtil.nz(aggregate.getPeriodTotal()) : BigDecimal.ZERO;
+            BigDecimal todayValue = aggregate != null ? NumberUtil.nz(aggregate.getTodayTotal()) : BigDecimal.ZERO;
+            int issueCount = (int) (long) McpParallel.get(fIssue);
 
-        ProgressSummaryDto progress = computeProgress(groups,
-                nguongHoanThanhThap != null ? nguongHoanThanhThap : DEFAULT_NGUONG_HOAN_THANH_THAP);
-        String khoaXepHang = xepHangTheo == null ? "giaTri" : xepHangTheo.trim();
-        boolean tang = Boolean.TRUE.equals(tangDan);
-        RankingOverviewDto nhaThauRanking = computeRanking(groups,
-                ProgressGroupProjection::getNhaThauId,
-                ProgressGroupProjection::getNhaThauTen, Integer.MAX_VALUE, khoaXepHang, tang);
-        RankingOverviewDto khuVucRanking = computeRanking(groups,
-                ProgressGroupProjection::getKhuVucId,
-                ProgressGroupProjection::getKhuVucTen, Integer.MAX_VALUE, khoaXepHang, tang);
-        RankingOverviewDto tinhRanking = computeRanking(groups,
-                g -> g.getTinhId() != null ? g.getTinhId() : new UUID(0L, 0L), // đối tượng chưa gán tỉnh: gom thành 1 dòng "—" để tổng khớp
-                ProgressGroupProjection::getTinhTen, Integer.MAX_VALUE, khoaXepHang, tang);
-        RankingOverviewDto loaiHopDongRanking = computeRanking(groups,
-                ProgressGroupProjection::getLoaiHopDongId,
-                ProgressGroupProjection::getLoaiHopDongTen, Integer.MAX_VALUE, khoaXepHang, tang);
-        RankingOverviewDto hopDongRanking = computeRanking(groups,
-                ProgressGroupProjection::getHopDongId,
-                ProgressGroupProjection::getHopDongTen, 20, khoaXepHang, tang);
-        RankingOverviewDto doiTuongRanking = computeDoiTuongRanking(topDoiTuong, soDoiTuong);
+            OutputSummaryDto summary = OutputSummaryDto.builder()
+                    .totalObjects(totalObjects)
+                    .objectsWithOutput(objectsWithOutput)
+                    .objectsWithoutOutput(Math.max(totalObjects - objectsWithOutput, 0))
+                    .periodValue(periodValue)
+                    .todayValue(todayValue)
+                    .averageValuePerObject(totalObjects > 0
+                            ? periodValue.divide(BigDecimal.valueOf(totalObjects), 2, RoundingMode.HALF_UP)
+                            : BigDecimal.ZERO)
+                    .unit("VNĐ")
+                    .openIssueCount(issueCount)
+                    .build();
 
-        BigDecimal previousValue = aggregate != null ? NumberUtil.nz(aggregate.getPreviousTotal()) : BigDecimal.ZERO;
-        TrendInfo trend = TrendCalculator.compare(periodValue, previousValue, previousPeriod.label());
+            ProgressSummaryDto progress = computeProgress(groups,
+                    nguongHoanThanhThap != null ? nguongHoanThanhThap : DEFAULT_NGUONG_HOAN_THANH_THAP);
+            BigDecimal previousValue = aggregate != null ? NumberUtil.nz(aggregate.getPreviousTotal()) : BigDecimal.ZERO;
+            TrendInfo trend = TrendCalculator.compare(periodValue, previousValue, previousPeriod.label());
 
-        PeriodInfo period = new PeriodInfo(fromDate.toString(), toDate.toString(), fromDate + " → " + toDate);
-
-        PeriodTrendDto periodTrend = computePeriodTrend(fromDate, toDate, groups, buckets, McpParallel.get(fCells));
-
-        var nhaThauChuaBaoRows = McpParallel.get(fChuaBao);
-        List<SanLuongNhaThauItem> nhaThauChuaBaoTrongKy = nhaThauChuaBaoRows.stream()
-                .map(SanLuongToolHandlerImpl::mapNhaThauChuaBao)
-                .toList();
-        PagedResult<SanLuongNhaThauItem> nhaThauChuaBaoTrongKyPaged = PagedResult.of(
-                nhaThauChuaBaoTrongKy, pageNt.getPageNumber(), pageNt.getPageSize(), tongTheoTrang(nhaThauChuaBaoRows.isEmpty() ? null : nhaThauChuaBaoRows.get(0).getTong(),
-                        pageNt.getPageNumber(), () -> sanLuongToolRepository.demNhaThauChuaBaoTrongKy(fromDate, toDate,
-                                nhaThauId, hopDongId, doiTuongIds, khuVucId, resolvedTinhThanhId, loaiHopDongId)));
-
-        var nhaThauDaBaoRows = McpParallel.get(fDaBao);
-        List<SanLuongNhaThauItem> nhaThauDaBaoTrongKy = nhaThauDaBaoRows.stream()
-                .map(SanLuongToolHandlerImpl::mapNhaThauDaBao)
-                .toList();
-        PagedResult<SanLuongNhaThauItem> nhaThauDaBaoTrongKyPaged = PagedResult.of(
-                nhaThauDaBaoTrongKy, pageNt.getPageNumber(), pageNt.getPageSize(), tongTheoTrang(nhaThauDaBaoRows.isEmpty() ? null : nhaThauDaBaoRows.get(0).getTong(),
-                        pageNt.getPageNumber(), () -> sanLuongToolRepository.demNhaThauDaBaoTrongKy(fromDate, toDate,
-                                nhaThauId, hopDongId, doiTuongIds, khuVucId, resolvedTinhThanhId, loaiHopDongId)));
-
-        var ntKhongDatPage = McpParallel.get(fNtKhongDat);
-        long soDat = 0;
-        BigDecimal giaTriDat = BigDecimal.ZERO;
-        long soKhongDat = 0;
-        BigDecimal giaTriKhongDat = BigDecimal.ZERO;
-        for (Object[] r : McpParallel.get(fNtThongKe)) {
-            if ("dat".equals(r[0])) {
-                soDat = ((Number) r[1]).longValue();
-                giaTriDat = NumberUtil.toBigDecimal(r[2]);
-            } else {
-                soKhongDat = ((Number) r[1]).longValue();
-                giaTriKhongDat = NumberUtil.toBigDecimal(r[2]);
-            }
+            response.period(new PeriodInfo(fromDate.toString(), toDate.toString(), fromDate + " → " + toDate))
+                    .summary(summary)
+                    .progress(progress)
+                    .trend(trend);
         }
-        Object[] cho = McpParallel.get(fNtCho).get(0);
-        SanLuongNghiemThuDto nghiemThu = SanLuongNghiemThuDto.builder()
-                .soDat(soDat)
-                .giaTriDat(giaTriDat)
-                .soKhongDat(soKhongDat)
-                .giaTriKhongDat(giaTriKhongDat)
-                .soChoNghiemThu(((Number) cho[0]).longValue())
-                .giaTriChoNghiemThu(NumberUtil.toBigDecimal(cho[1]))
-                .khongDat(PagedResult.of(ntKhongDatPage.getContent(), ntKhongDatPage.getNumber(), ntKhongDatPage.getSize(),
-                        ntKhongDatPage.getTotalElements()))
-                .build();
-
-        var doiTuongChuaCoRows = bundle.stream().filter(r -> "C".equals(r.getKind())).toList();
-        PagedResult<SanLuongDoiTuongChuaCoItem> doiTuongChuaCo = PagedResult.of(doiTuongChuaCoRows.stream()
-                .map(r -> SanLuongDoiTuongChuaCoItem.builder()
-                        .maDoiTuong(r.getMaDoiTuong())
-                        .loaiDoiTuong(r.getDoiTuongTen())
-                        .hopDong(r.getHopDongTen())
-                        .nhaThau(r.getNhaThauTen())
-                        .khuVuc(r.getKhuVucTen())
-                        .soHangMuc(r.getTotalHangMuc() != null ? r.getTotalHangMuc() : 0)
-                        .coVuongMacMo(Boolean.TRUE.equals(r.getHasOpenVuongMac()))
-                        .build()).toList(),
-                pageNt.getPageNumber(), pageNt.getPageSize(), tongTheoTrang(doiTuongChuaCoRows.isEmpty() ? null : doiTuongChuaCoRows.get(0).getTong(),
-                        pageNt.getPageNumber(), () -> sanLuongToolRepository.demDoiTuongChuaCoSanLuong(fromDate, toDate, nhaThauId,
-                                hopDongId, doiTuongIds, khuVucId, resolvedTinhThanhId, loaiHopDongId)));
 
         List<SanLuongHangMucDoiTuongDto> hangMucDt = fHangMuc != null ? gomHangMuc(McpParallel.get(fHangMuc)) : null;
-        boolean doiTuongCuThe = hangMucDt != null && !hangMucDt.isEmpty();
-        return SanLuongQueryResponse.builder()
-                .period(period)
-                .summary(summary)
-                .progress(progress)
-                .trend(trend)
-                .nhaThau(doiTuongCuThe || nhaThauId != null ? null : nhaThauRanking)
-                .khuVuc(doiTuongCuThe || khuVucId != null ? null : khuVucRanking)
-                .tinh(doiTuongCuThe || resolvedTinhThanhId != null ? null : tinhRanking)
-                .loaiHopDong(doiTuongCuThe || loaiHopDongId != null ? null : loaiHopDongRanking)
-                .hopDong(doiTuongCuThe || hopDongId != null ? null : hopDongRanking)
-                .doiTuong(doiTuongCuThe ? null : doiTuongRanking)
-                .periodTrend(periodTrend)
-                .nhaThauChuaBaoTrongKy(nhaThauChuaBaoTrongKyPaged)
-                .nhaThauDaBaoTrongKy(nhaThauDaBaoTrongKyPaged)
-                .nghiemThu(nghiemThu)
-                .doiTuongChuaCoSanLuong(doiTuongChuaCo)
-                .danhSachDoiTuong(danhSachTrang(McpParallel.get(fDanhSach), pageNt.getPageNumber(), pageNt.getPageSize(), () -> tongDanhSach(
-                        includeWithoutOutput, sapXep, today, fromDate, toDate, nhaThauId, hopDongId, doiTuongIds, khuVucId, resolvedTinhThanhId, loaiHopDongId)))
-                .hangMucDoiTuong(hangMucDt)
-                .build();
+        if (blocks.contains(Block.HANG_MUC)) {
+            response.hangMucDoiTuong(hangMucDt);
+        }
+
+        if (canXepHang) {
+            List<DoiTuongProgressProjection> topDoiTuong = bundle.stream().filter(r -> "T".equals(r.getKind())).map(r -> (DoiTuongProgressProjection) r).toList();
+            long soDoiTuong = groups.stream().mapToLong(ProgressGroupProjection::getN).sum();
+            String khoaXepHang = xepHangTheo == null ? "giaTri" : xepHangTheo.trim();
+            boolean tang = Boolean.TRUE.equals(tangDan);
+            boolean doiTuongCuThe = hangMucDt != null && !hangMucDt.isEmpty();
+            response.nhaThau(doiTuongCuThe || nhaThauId != null ? null : computeRanking(groups,
+                            ProgressGroupProjection::getNhaThauId,
+                            ProgressGroupProjection::getNhaThauTen, Integer.MAX_VALUE, khoaXepHang, tang))
+                    .khuVuc(doiTuongCuThe || khuVucId != null ? null : computeRanking(groups,
+                            ProgressGroupProjection::getKhuVucId,
+                            ProgressGroupProjection::getKhuVucTen, Integer.MAX_VALUE, khoaXepHang, tang))
+                    .tinh(doiTuongCuThe || resolvedTinhThanhId != null ? null : computeRanking(groups,
+                            g -> g.getTinhId() != null ? g.getTinhId() : new UUID(0L, 0L), // đối tượng chưa gán tỉnh: gom thành 1 dòng "—" để tổng khớp
+                            ProgressGroupProjection::getTinhTen, Integer.MAX_VALUE, khoaXepHang, tang))
+                    .loaiHopDong(doiTuongCuThe || loaiHopDongId != null ? null : computeRanking(groups,
+                            ProgressGroupProjection::getLoaiHopDongId,
+                            ProgressGroupProjection::getLoaiHopDongTen, Integer.MAX_VALUE, khoaXepHang, tang))
+                    .hopDong(doiTuongCuThe || hopDongId != null ? null : computeRanking(groups,
+                            ProgressGroupProjection::getHopDongId,
+                            ProgressGroupProjection::getHopDongTen, 20, khoaXepHang, tang))
+                    .doiTuong(doiTuongCuThe ? null : computeDoiTuongRanking(topDoiTuong, soDoiTuong));
+        }
+
+        if (canXuHuong) {
+            response.periodTrend(computePeriodTrend(fromDate, toDate, groups, buckets, McpParallel.get(fCells)));
+        }
+
+        if (canNhaThauBao) {
+            var nhaThauChuaBaoRows = McpParallel.get(fChuaBao);
+            response.nhaThauChuaBaoTrongKy(PagedResult.of(
+                    nhaThauChuaBaoRows.stream().map(SanLuongToolHandlerImpl::mapNhaThauChuaBao).toList(),
+                    pageNt.getPageNumber(), pageNt.getPageSize(), tongTheoTrang(nhaThauChuaBaoRows.isEmpty() ? null : nhaThauChuaBaoRows.get(0).getTong(),
+                            pageNt.getPageNumber(), () -> sanLuongToolRepository.demNhaThauChuaBaoTrongKy(fromDate, toDate,
+                                    nhaThauId, hopDongId, doiTuongIds, khuVucId, resolvedTinhThanhId, loaiHopDongId))));
+
+            var nhaThauDaBaoRows = McpParallel.get(fDaBao);
+            response.nhaThauDaBaoTrongKy(PagedResult.of(
+                    nhaThauDaBaoRows.stream().map(SanLuongToolHandlerImpl::mapNhaThauDaBao).toList(),
+                    pageNt.getPageNumber(), pageNt.getPageSize(), tongTheoTrang(nhaThauDaBaoRows.isEmpty() ? null : nhaThauDaBaoRows.get(0).getTong(),
+                            pageNt.getPageNumber(), () -> sanLuongToolRepository.demNhaThauDaBaoTrongKy(fromDate, toDate,
+                                    nhaThauId, hopDongId, doiTuongIds, khuVucId, resolvedTinhThanhId, loaiHopDongId))));
+        }
+
+        if (canNghiemThu) {
+            var ntKhongDatPage = McpParallel.get(fNtKhongDat);
+            long soDat = 0;
+            BigDecimal giaTriDat = BigDecimal.ZERO;
+            long soKhongDat = 0;
+            BigDecimal giaTriKhongDat = BigDecimal.ZERO;
+            for (Object[] r : McpParallel.get(fNtThongKe)) {
+                if ("dat".equals(r[0])) {
+                    soDat = ((Number) r[1]).longValue();
+                    giaTriDat = NumberUtil.toBigDecimal(r[2]);
+                } else {
+                    soKhongDat = ((Number) r[1]).longValue();
+                    giaTriKhongDat = NumberUtil.toBigDecimal(r[2]);
+                }
+            }
+            Object[] cho = McpParallel.get(fNtCho).get(0);
+            response.nghiemThu(SanLuongNghiemThuDto.builder()
+                    .soDat(soDat)
+                    .giaTriDat(giaTriDat)
+                    .soKhongDat(soKhongDat)
+                    .giaTriKhongDat(giaTriKhongDat)
+                    .soChoNghiemThu(((Number) cho[0]).longValue())
+                    .giaTriChoNghiemThu(NumberUtil.toBigDecimal(cho[1]))
+                    .khongDat(PagedResult.of(ntKhongDatPage.getContent(), ntKhongDatPage.getNumber(), ntKhongDatPage.getSize(),
+                            ntKhongDatPage.getTotalElements()))
+                    .build());
+        }
+
+        if (canDoiTuongChuaCo) {
+            var doiTuongChuaCoRows = bundle.stream().filter(r -> "C".equals(r.getKind())).toList();
+            response.doiTuongChuaCoSanLuong(PagedResult.of(doiTuongChuaCoRows.stream()
+                    .map(r -> SanLuongDoiTuongChuaCoItem.builder()
+                            .maDoiTuong(r.getMaDoiTuong())
+                            .loaiDoiTuong(r.getDoiTuongTen())
+                            .hopDong(r.getHopDongTen())
+                            .nhaThau(r.getNhaThauTen())
+                            .khuVuc(r.getKhuVucTen())
+                            .soHangMuc(r.getTotalHangMuc() != null ? r.getTotalHangMuc() : 0)
+                            .coVuongMacMo(Boolean.TRUE.equals(r.getHasOpenVuongMac()))
+                            .build()).toList(),
+                    pageNt.getPageNumber(), pageNt.getPageSize(), tongTheoTrang(doiTuongChuaCoRows.isEmpty() ? null : doiTuongChuaCoRows.get(0).getTong(),
+                            pageNt.getPageNumber(), () -> sanLuongToolRepository.demDoiTuongChuaCoSanLuong(fromDate, toDate, nhaThauId,
+                                    hopDongId, doiTuongIds, khuVucId, resolvedTinhThanhId, loaiHopDongId))));
+        }
+
+        if (fDanhSach != null) {
+            response.danhSachDoiTuong(danhSachTrang(McpParallel.get(fDanhSach), pageNt.getPageNumber(), pageNt.getPageSize(), () -> tongDanhSach(
+                    includeWithoutOutput, sapXep, today, fromDate, toDate, nhaThauId, hopDongId, doiTuongIds, khuVucId, resolvedTinhThanhId, loaiHopDongId)));
+        }
+
+        return response.build();
     }
 
     private static List<SanLuongHangMucDoiTuongDto> gomHangMuc(List<HangMucDoiTuongProjection> rows) {

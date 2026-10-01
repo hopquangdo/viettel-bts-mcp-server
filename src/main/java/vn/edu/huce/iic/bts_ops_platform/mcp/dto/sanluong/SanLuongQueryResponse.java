@@ -1,5 +1,6 @@
 package vn.edu.huce.iic.bts_ops_platform.mcp.dto.sanluong;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -17,6 +18,7 @@ import vn.edu.huce.iic.bts_ops_platform.mcp.dto.common.TrendInfo;
  * DTO chỉ chứa dữ liệu nghiệp vụ đã tổng hợp — LLM chịu trách nhiệm biến dữ liệu thành câu trả lời tự nhiên.
  */
 @Data
+@JsonInclude(JsonInclude.Include.NON_NULL)
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
