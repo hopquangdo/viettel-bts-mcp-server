@@ -1,18 +1,22 @@
-# CI/CD: test (nhánh dev + main) -> build image (dev + main) -> deploy lên k3s:
+# CI/CD: test (PR + dev + main) -> build image (dev + main) -> deploy lên k3s -> release (chỉ main):
 #   main -> namespace viettel-prod (vietdemo.com), dev -> namespace viettel-dev (qwen.vietdemo.com).
+#   Deploy main thành công -> tag vX.Y.Z + nhánh release/vX.Y.Z + GitHub Release + image :vX.Y.Z.
+#   Luồng đầy đủ: docs/ci-cd-release-flow.md (repo gốc).
 #
-# Secrets cần có ở repo này (Settings > Secrets and variables > Actions, environment "production"):
+# Các bước build / deploy / release dùng chung, nằm ở repo hopquangdo/viettel-vtk-deploy (thư mục actions/),
+# được checkout vào .ci/ ở mỗi job.
+#
+# Secrets cấp repo (Settings > Secrets and variables > Actions > Repository secrets):
+#   DEPLOY_REPO_TOKEN                                             fine-grained PAT, Contents: Read-only trên viettel-vtk-deploy
+#   GHCR_USERNAME, GHCR_TOKEN                                     (tùy chọn) PAT write:packages; nếu có sẽ dùng thay GITHUB_TOKEN
+#
+# Secrets theo environment (Settings > Environments): "production" cho main, "development" cho dev -- mỗi bên tự khai báo:
 #   SSH_HOST, SSH_PORT (mặc định 22), SSH_USER, SSH_PRIVATE_KEY   vào server chạy k3s
-#   KUBE_NAMESPACE                                                (tùy chọn) namespace cho main, mặc định viettel-prod;
-#                                                                 nhánh dev luôn deploy vào viettel-dev
-#   GHCR_USERNAME, GHCR_TOKEN                                     (tùy chọn) PAT push+pull (write:packages + read:packages); nếu có sẽ dùng
-#                                                                 thay GITHUB_TOKEN để đẩy image (cần khi package chưa gắn với repo)
+#   KUBE_NAMESPACE                                                (tùy chọn, chỉ production) mặc định viettel-prod;
+#                                                                 dev luôn deploy vào viettel-dev
 #
-# Image chỉ đẩy lên ghcr.io bằng GITHUB_TOKEN. Deploy = `kubectl set image` đúng tag sha-xxxxxxx vừa build; lỗi
-# rollout thì tự `rollout undo`. Lần đầu (chưa có Deployment) chạy scripts/apply.sh (repo viettel-vtk-deploy) trên server.
-# Sau khi mcp-server rollout xong: tự `kubectl rollout restart` deployment ai-assistant (biến
-# AI_ASSISTANT_DEPLOYMENT) để nó reconnect MCP và nạp lại tool mới -- ai-assistant chỉ discover tool
-# 1 lần lúc khởi động (cache trong process), không tự phát hiện tool đổi nếu không restart.
+# Sau khi mcp-server rollout xong: tự `rollout restart` ai-assistant để nó reconnect MCP và nạp lại tool
+# mới -- ai-assistant chỉ discover tool 1 lần lúc khởi động (cache trong process).
 
 name: CI/CD
 
@@ -22,6 +26,12 @@ on:
   pull_request:
     branches: [dev, main]
   workflow_dispatch:
+    inputs:
+      bump:
+        description: Mức tăng version khi release (auto = theo commit message)
+        type: choice
+        options: [auto, patch, minor, major]
+        default: auto
 
 # Không hủy lần chạy đang deploy ở main/dev.
 concurrency:
@@ -33,11 +43,10 @@ permissions:
   packages: write
 
 env:
-  REGISTRY: ghcr.io
   DEPLOYMENT: mcp-server
-  # ai-assistant chỉ nạp danh sách tool MCP 1 lần lúc khởi động (xem tool_registry trong repo
-  # ai-assistant) nên phải restart nó sau khi mcp-server đổi tool/mô tả tool để nó nạp lại.
-  AI_ASSISTANT_DEPLOYMENT: ai-assistant
+  IMAGE_NAME: ${{ github.repository_owner }}/mcp-server
+  CI_REPO: hopquangdo/viettel-vtk-deploy
+  CI_REF: main
 
 jobs:
   test:
@@ -60,108 +69,69 @@ jobs:
     if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev') && github.event_name != 'pull_request'
     timeout-minutes: 30
     outputs:
-      # Chỉ truyền tag: GitHub loại bỏ job output nếu nó chứa chuỗi trùng giá trị một secret (tên image chứa tên tài khoản).
-      tag: ${{ steps.meta.outputs.tag }}
+      tag: ${{ steps.image.outputs.tag }}
     steps:
       - uses: actions/checkout@v4
-      - uses: docker/setup-buildx-action@v3
-      - uses: docker/login-action@v3
+      - uses: actions/checkout@v4
+        with: { repository: "${{ env.CI_REPO }}", ref: "${{ env.CI_REF }}", token: "${{ secrets.DEPLOY_REPO_TOKEN }}", path: .ci }
+      - id: image
+        uses: ./.ci/actions/build-image
         with:
-          registry: ${{ env.REGISTRY }}
-          # Có GHCR_TOKEN (+ GHCR_USERNAME) thì dùng; không thì dùng GITHUB_TOKEN của workflow.
-          username: ${{ (secrets.GHCR_TOKEN != '' && secrets.GHCR_USERNAME) || github.actor }}
-          password: ${{ secrets.GHCR_TOKEN || secrets.GITHUB_TOKEN }}
-      - name: Resolve image
-        id: meta
-        run: |
-          IMAGE="${REGISTRY}/$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')/mcp-server"
-          TAG="sha-${GITHUB_SHA::7}"
-          echo "ref=${IMAGE}:${TAG}" >> "$GITHUB_OUTPUT"
-          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
-          echo "tags<<EOF" >> "$GITHUB_OUTPUT"
-          echo "${IMAGE}:${TAG}" >> "$GITHUB_OUTPUT"
-          echo "EOF" >> "$GITHUB_OUTPUT"
-      - name: Build and push
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: ./Dockerfile
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          cache-from: type=gha,scope=mcp-server
-          cache-to: type=gha,mode=max,scope=mcp-server
-      - name: Publish image reference
-        run: |
-          echo "### Image đã build" >> "$GITHUB_STEP_SUMMARY"
-          echo "\`${{ steps.meta.outputs.ref }}\`" >> "$GITHUB_STEP_SUMMARY"
+          image-name: ${{ env.IMAGE_NAME }}
+          registry-username: ${{ (secrets.GHCR_TOKEN != '' && secrets.GHCR_USERNAME) || github.actor }}
+          registry-password: ${{ secrets.GHCR_TOKEN || secrets.GITHUB_TOKEN }}
+          cache-scope: mcp-server
 
   deploy:
     name: Deploy to k3s
     runs-on: ubuntu-latest
     needs: build
     if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev') && github.event_name != 'pull_request'
-    environment: production
+    # dev và prod tách biệt: environment riêng (secrets, reviewers riêng) và hàng đợi deploy riêng.
+    environment: ${{ github.ref == 'refs/heads/main' && 'production' || 'development' }}
     concurrency:
-      group: k8s-deploy-${{ github.repository }}
+      group: k8s-deploy-${{ github.repository }}-${{ github.ref_name }}
       cancel-in-progress: false
     timeout-minutes: 15
     steps:
-      - name: Resolve image reference
-        id: img
-        run: |
-          IMAGE="${REGISTRY}/$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')/mcp-server"
-          echo "ref=${IMAGE}:${{ needs.build.outputs.tag }}" >> "$GITHUB_OUTPUT"
-
-      - name: Set image and wait for rollout
-        uses: appleboy/ssh-action@v1.2.0
-        env:
-          NS: ${{ github.ref == 'refs/heads/main' && (secrets.KUBE_NAMESPACE || 'viettel-prod') || 'viettel-dev' }}
-          IMAGE: ${{ steps.img.outputs.ref }}
-          DEPLOYMENT: ${{ env.DEPLOYMENT }}
-          AI_ASSISTANT_DEPLOYMENT: ${{ env.AI_ASSISTANT_DEPLOYMENT }}
+      - uses: actions/checkout@v4
+        with: { repository: "${{ env.CI_REPO }}", ref: "${{ env.CI_REF }}", token: "${{ secrets.DEPLOY_REPO_TOKEN }}", path: .ci }
+      - uses: ./.ci/actions/deploy-k8s
         with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          port: ${{ secrets.SSH_PORT || 22 }}
-          envs: NS,IMAGE,DEPLOYMENT,AI_ASSISTANT_DEPLOYMENT
-          script_stop: true
-          script: |
-            set -euo pipefail
-            [ -n "${NS:-}" ] && [ -n "${IMAGE:-}" ] || { echo "Thiếu NS hoặc IMAGE"; exit 1; }
-            export KUBECONFIG="${KUBECONFIG:-/etc/rancher/k3s/k3s.yaml}"
-            if command -v kubectl >/dev/null 2>&1; then K="kubectl"; else K="k3s kubectl"; fi
+          deployment: ${{ env.DEPLOYMENT }}
+          image-name: ${{ env.IMAGE_NAME }}
+          image-tag: ${{ needs.build.outputs.tag }}
+          prod-namespace: ${{ secrets.KUBE_NAMESPACE || 'viettel-prod' }}
+          # dev cố định viettel-dev, không đọc KUBE_NAMESPACE: tránh secret cấp repo đẩy bản dev vào prod.
+          dev-namespace: viettel-dev
+          restart-after: ai-assistant
+          ssh-host: ${{ secrets.SSH_HOST }}
+          ssh-user: ${{ secrets.SSH_USER }}
+          ssh-key: ${{ secrets.SSH_PRIVATE_KEY }}
+          ssh-port: ${{ secrets.SSH_PORT || '22' }}
 
-            if ! $K -n "$NS" get deploy "$DEPLOYMENT" >/dev/null 2>&1; then
-              echo "Deployment $DEPLOYMENT chưa tồn tại trong namespace $NS."
-              echo "Chạy scripts/apply.sh (repo viettel-vtk-deploy) trên server để tạo hạ tầng k8s lần đầu."
-              exit 1
-            fi
-
-            prev="$($K -n "$NS" get deploy "$DEPLOYMENT" -o jsonpath='{.spec.template.spec.containers[0].image}')"
-            echo "Đang chạy: $prev"
-            echo "Bản mới : $IMAGE"
-
-            if [ "$prev" = "$IMAGE" ]; then
-              echo "Đã đúng bản này, không làm gì."
-              exit 0
-            fi
-
-            $K -n "$NS" set image "deployment/$DEPLOYMENT" "$DEPLOYMENT=$IMAGE"
-            if ! $K -n "$NS" rollout status "deployment/$DEPLOYMENT" --timeout=300s; then
-              echo "Rollout thất bại, quay lại: $prev"
-              $K -n "$NS" rollout undo "deployment/$DEPLOYMENT"
-              $K -n "$NS" rollout status "deployment/$DEPLOYMENT" --timeout=180s || echo "Cảnh báo: chưa ổn định sau khi quay lại"
-              exit 1
-            fi
-            echo "OK $DEPLOYMENT -> $IMAGE"
-
-            # ai-assistant chỉ nạp danh sách/mô tả tool MCP 1 lần lúc khởi động (cache trong tiến
-            # trình) nên phải rollout restart để nó reconnect và nạp lại sau khi mcp-server đổi.
-            if [ -n "${AI_ASSISTANT_DEPLOYMENT:-}" ] && $K -n "$NS" get deploy "$AI_ASSISTANT_DEPLOYMENT" >/dev/null 2>&1; then
-              echo "Restart $AI_ASSISTANT_DEPLOYMENT để nạp lại tool MCP mới..."
-              $K -n "$NS" rollout restart "deployment/$AI_ASSISTANT_DEPLOYMENT"
-              $K -n "$NS" rollout status "deployment/$AI_ASSISTANT_DEPLOYMENT" --timeout=300s || echo "Cảnh báo: $AI_ASSISTANT_DEPLOYMENT chưa ổn định sau restart"
-            else
-              echo "Bỏ qua restart $AI_ASSISTANT_DEPLOYMENT (không tìm thấy deployment trong namespace $NS)."
-            fi
+  release:
+    name: Tag release
+    runs-on: ubuntu-latest
+    needs: [build, deploy]
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    permissions:
+      contents: write
+      packages: write
+    concurrency:
+      group: release-${{ github.repository }}
+      cancel-in-progress: false
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: actions/checkout@v4
+        with: { repository: "${{ env.CI_REPO }}", ref: "${{ env.CI_REF }}", token: "${{ secrets.DEPLOY_REPO_TOKEN }}", path: .ci }
+      - uses: ./.ci/actions/release
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          image-name: ${{ env.IMAGE_NAME }}
+          image-tag: ${{ needs.build.outputs.tag }}
+          registry-username: ${{ (secrets.GHCR_TOKEN != '' && secrets.GHCR_USERNAME) || github.actor }}
+          registry-password: ${{ secrets.GHCR_TOKEN || secrets.GITHUB_TOKEN }}
+          bump: ${{ inputs.bump || 'auto' }}
