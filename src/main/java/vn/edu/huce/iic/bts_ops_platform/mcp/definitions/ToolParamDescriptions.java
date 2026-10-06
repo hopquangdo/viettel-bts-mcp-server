@@ -18,7 +18,9 @@ public final class ToolParamDescriptions {
 
     public static final String HOP_DONG = "Hợp đồng cần lọc: ID, mã hoặc tên (ưu tiên truyền mã hoặc ID; tên mơ hồ sẽ báo lỗi kèm danh sách ứng viên). Mã hợp đồng, ví dụ TVTK023241, 31032026VTK2025";
 
-    public static final String LOAI_HOP_DONG = "Loại hợp đồng cần lọc: ID, mã hoặc tên (mơ hồ sẽ báo lỗi kèm ứng viên)";
+    public static final String LOAI_HOP_DONG = "Loại hợp đồng cần lọc: ID, mã hoặc tên (mơ hồ sẽ báo lỗi kèm ứng viên)."
+            + " Chỉ truyền khi người dùng nêu đích danh 1 loại hợp đồng; cụm \"sản lượng thi công\", \"thi công\" là cách gọi"
+            + " chung toàn bộ sản lượng, KHÔNG phải loại hợp đồng → bỏ trống";
 
     public static final String PAGE = "Số trang, bắt đầu từ 0";
 
@@ -26,7 +28,10 @@ public final class ToolParamDescriptions {
 
     public static final String DOI_TUONG = "Đối tượng cần lọc: ID, mã hoặc tên (ưu tiên truyền mã hoặc ID; tên mơ hồ sẽ báo lỗi kèm danh sách ứng viên)";
 
-    public static final String FROM_DATE = "Ngày bắt đầu của khoảng thời gian lọc";
+    public static final String FROM_DATE = "Ngày bắt đầu khoảng lọc, YYYY-MM-DD, theo ngày hiện tại: hôm nay/hôm qua = ngày đó;"
+            + " tuần này = thứ Hai tuần này; tuần trước = thứ Hai tuần trước; tháng này/trước = ngày 1 của tháng; năm nay = 01-01;"
+            + " N ngày qua = hôm nay - (N-1). Người dùng không nói thời gian thì bỏ trống";
 
-    public static final String TO_DATE = "Ngày kết thúc của khoảng thời gian lọc (gồm cả ngày này)";
+    public static final String TO_DATE = "Ngày kết thúc khoảng lọc (gồm cả ngày này), YYYY-MM-DD: kỳ đang diễn ra = hôm nay;"
+            + " tuần trước = Chủ nhật tuần trước; tháng trước = ngày cuối tháng trước. Không nói thời gian thì bỏ trống";
 }

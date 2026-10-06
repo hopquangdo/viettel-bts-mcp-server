@@ -5,11 +5,14 @@ import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.model.ToolContext;
 import org.springframework.ai.tool.ToolCallback;
 import org.springframework.ai.tool.definition.ToolDefinition;
+import vn.edu.huce.iic.bts_ops_platform.mcp.common.dto.AppException;
+import vn.edu.huce.iic.bts_ops_platform.mcp.exception.ToolErrorCode;
 
 /**
  * Bọc quanh 1 ToolCallback bất kỳ (không riêng MCP) để log tên tool, tham số đầu vào (JSON), kết
  * quả, và thời gian thực thi — cấu hình 1 lần ở McpToolConfig, tự áp dụng cho mọi tool đăng ký,
- * không cần sửa từng lớp Tools khi thêm tool mới.
+ * không cần sửa từng lớp Tools khi thêm tool mới. Lỗi filter (không tìm thấy / mơ hồ) được nối thêm hướng dẫn
+ * cho LLM ({@link ToolErrorCode#getModelHint()}) để agent báo / hỏi lại người dùng thay vì tự đoán.
  */
 public class ToolCallLoggingDecorator implements ToolCallback {
 
@@ -46,7 +49,18 @@ public class ToolCallLoggingDecorator implements ToolCallback {
             return result;
         } catch (RuntimeException ex) {
             log.warn("tool error: {} durationMs={} error={}", name, System.currentTimeMillis() - start, ex.toString());
-            throw ex;
+            throw withModelHint(ex);
         }
+    }
+
+    private static RuntimeException withModelHint(RuntimeException ex) {
+        for (Throwable cause = ex; cause != null; cause = cause.getCause()) {
+            if (cause instanceof AppException app && app.getExceptionCode() instanceof ToolErrorCode code
+                    && code.getModelHint() != null) {
+                String message = app.getMessage() == null ? "" : app.getMessage().replaceAll("[.\\s]+$", "");
+                return new AppException(code, message + ". " + code.getModelHint());
+            }
+        }
+        return ex;
     }
 }

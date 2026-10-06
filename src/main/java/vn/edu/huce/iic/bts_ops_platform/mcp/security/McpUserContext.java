@@ -83,9 +83,13 @@ public class McpUserContext {
         if (toolContext == null) {
             return Optional.empty();
         }
-        return McpToolUtils.getMcpExchange(toolContext)
-                .map(McpSyncServerExchange::transportContext)
-                .map(context -> context.get(PRINCIPAL_KEY))
+        // Stateless server: ToolContext giữ thẳng McpTransportContext; streamable (có session): giữ exchange.
+        Object holder = toolContext.getContext().get(McpToolUtils.TOOL_CONTEXT_MCP_EXCHANGE_KEY);
+        McpTransportContext context = holder instanceof McpSyncServerExchange exchange
+                ? exchange.transportContext()
+                : holder instanceof McpTransportContext transportContext ? transportContext : null;
+        return Optional.ofNullable(context)
+                .map(transport -> transport.get(PRINCIPAL_KEY))
                 .filter(McpUserPrincipal.class::isInstance)
                 .map(McpUserPrincipal.class::cast);
     }

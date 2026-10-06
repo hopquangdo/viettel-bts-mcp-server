@@ -1,7 +1,7 @@
 package vn.edu.huce.iic.bts_ops_platform.mcp.support;
 
-import vn.edu.huce.iic.bts_ops_platform.mcp.dto.nguonviec.NguonViecRowToolItem;
-import vn.edu.huce.iic.bts_ops_platform.mcp.dto.nguonviec.NguonViecManualRowDto;
+import vn.edu.huce.iic.bts_ops_platform.mcp.modules.nguonviec.dto.NguonViecRowToolItem;
+import vn.edu.huce.iic.bts_ops_platform.mcp.modules.nguonviec.dto.NguonViecManualRowDto;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;

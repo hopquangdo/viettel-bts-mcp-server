@@ -4,11 +4,11 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import vn.edu.huce.iic.bts_ops_platform.mcp.common.cache.CacheService;
 import vn.edu.huce.iic.bts_ops_platform.mcp.common.dto.AppException;
-import vn.edu.huce.iic.bts_ops_platform.mcp.dto.canbo.CanBoInfo;
-import vn.edu.huce.iic.bts_ops_platform.mcp.dto.phancong.NguoiDungRow;
+import vn.edu.huce.iic.bts_ops_platform.mcp.common.dto.CanBoInfo;
+import vn.edu.huce.iic.bts_ops_platform.mcp.modules.phancong.dto.NguoiDungRow;
 import vn.edu.huce.iic.bts_ops_platform.mcp.exception.ToolErrorCode;
 import vn.edu.huce.iic.bts_ops_platform.mcp.helps.UuidHelp;
-import vn.edu.huce.iic.bts_ops_platform.mcp.repository.PhanCongToolRepository;
+import vn.edu.huce.iic.bts_ops_platform.mcp.modules.phancong.PhanCongToolRepository;
 
 import java.time.Duration;
 import java.util.UUID;

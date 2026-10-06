@@ -1,7 +1,7 @@
 package vn.edu.huce.iic.bts_ops_platform.mcp.support;
 
-import vn.edu.huce.iic.bts_ops_platform.mcp.dto.common.RankedEntityDto;
-import vn.edu.huce.iic.bts_ops_platform.mcp.dto.common.RankingOverviewDto;
+import vn.edu.huce.iic.bts_ops_platform.mcp.common.dto.RankedEntityDto;
+import vn.edu.huce.iic.bts_ops_platform.mcp.common.dto.RankingOverviewDto;
 
 import java.util.ArrayList;
 import java.util.Comparator;

@@ -1,5 +1,5 @@
-# CI/CD: test (PR + dev + main) -> build image (dev + main) -> deploy lên k3s -> release (chỉ main):
-#   main -> namespace viettel-prod (vietdemo.com), dev -> namespace viettel-dev (qwen.vietdemo.com).
+# CI/CD: test (PR + dev + main) -> build image (dev + main) -> deploy container (chỉ main) -> release (chỉ main):
+#   main -> container prod (vietdemo.com) qua deploy/docker/bin/deploy.sh (blue/green, không downtime). Không còn môi trường dev.
 #   Deploy main thành công -> tag vX.Y.Z + nhánh release/vX.Y.Z + GitHub Release + image :vX.Y.Z.
 #   Luồng đầy đủ: docs/ci-cd-release-flow.md (repo gốc).
 #
@@ -10,10 +10,8 @@
 #   DEPLOY_REPO_TOKEN                                             fine-grained PAT, Contents: Read-only trên viettel-vtk-deploy
 #   GHCR_USERNAME, GHCR_TOKEN                                     (tùy chọn) PAT write:packages; nếu có sẽ dùng thay GITHUB_TOKEN
 #
-# Secrets theo environment (Settings > Environments): "production" cho main, "development" cho dev -- mỗi bên tự khai báo:
-#   SSH_HOST, SSH_PORT (mặc định 22), SSH_USER, SSH_PRIVATE_KEY   vào server chạy k3s
-#   KUBE_NAMESPACE                                                (tùy chọn, chỉ production) mặc định viettel-prod;
-#                                                                 dev luôn deploy vào viettel-dev
+# Secrets theo environment (Settings > Environments): "production" (chỉ main deploy):
+#   SSH_HOST, SSH_PORT (mặc định 22), SSH_USER, SSH_PRIVATE_KEY   vào server chạy container
 #
 # Sau khi mcp-server rollout xong: tự `rollout restart` ai-assistant để nó reconnect MCP và nạp lại tool
 # mới -- ai-assistant chỉ discover tool 1 lần lúc khởi động (cache trong process).
@@ -43,8 +41,8 @@ permissions:
   packages: write
 
 env:
-  DEPLOYMENT: mcp-server
-  IMAGE_NAME: ${{ github.repository_owner }}/mcp-server
+  DEPLOYMENT: business-mcp
+  IMAGE_NAME: ${{ github.repository_owner }}/business-mcp
   CI_REPO: hopquangdo/viettel-vtk-deploy
   CI_REF: main
 
@@ -83,27 +81,23 @@ jobs:
           cache-scope: mcp-server
 
   deploy:
-    name: Deploy to k3s
+    name: Deploy container
     runs-on: ubuntu-latest
     needs: build
-    if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev') && github.event_name != 'pull_request'
-    # dev và prod tách biệt: environment riêng (secrets, reviewers riêng) và hàng đợi deploy riêng.
-    environment: ${{ github.ref == 'refs/heads/main' && 'production' || 'development' }}
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    environment: production
     concurrency:
-      group: k8s-deploy-${{ github.repository }}-${{ github.ref_name }}
+      group: deploy-${{ github.repository }}-${{ github.ref_name }}
       cancel-in-progress: false
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
         with: { repository: "${{ env.CI_REPO }}", ref: "${{ env.CI_REF }}", token: "${{ secrets.DEPLOY_REPO_TOKEN }}", path: .ci }
-      - uses: ./.ci/actions/deploy-k8s
+      - uses: ./.ci/actions/deploy-docker
         with:
-          deployment: ${{ env.DEPLOYMENT }}
+          service: ${{ env.DEPLOYMENT }}
           image-name: ${{ env.IMAGE_NAME }}
           image-tag: ${{ needs.build.outputs.tag }}
-          prod-namespace: ${{ secrets.KUBE_NAMESPACE || 'viettel-prod' }}
-          # dev cố định viettel-dev, không đọc KUBE_NAMESPACE: tránh secret cấp repo đẩy bản dev vào prod.
-          dev-namespace: viettel-dev
           restart-after: ai-assistant
           ssh-host: ${{ secrets.SSH_HOST }}
           ssh-user: ${{ secrets.SSH_USER }}

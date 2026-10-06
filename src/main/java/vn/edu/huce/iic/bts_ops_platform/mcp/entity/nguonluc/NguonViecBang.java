@@ -8,7 +8,7 @@ import lombok.Setter;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 import vn.edu.huce.iic.bts_ops_platform.mcp.common.entity.AuditableEntity;
-import vn.edu.huce.iic.bts_ops_platform.mcp.dto.nguonviec.NguonViecBangDuLieu;
+import vn.edu.huce.iic.bts_ops_platform.mcp.modules.nguonviec.dto.NguonViecBangDuLieu;
 
 @Getter
 @Setter
