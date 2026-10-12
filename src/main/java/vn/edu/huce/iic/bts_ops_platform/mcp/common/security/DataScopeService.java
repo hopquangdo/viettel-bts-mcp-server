@@ -8,8 +8,8 @@ import vn.edu.huce.iic.bts_ops_platform.mcp.common.util.SecurityContextHelper;
 import vn.edu.huce.iic.bts_ops_platform.mcp.config.AppDataScopeProperties;
 import vn.edu.huce.iic.bts_ops_platform.mcp.infrastructure.security.McpUserPrincipal;
 import vn.edu.huce.iic.bts_ops_platform.mcp.security.auth.AuthErrorCode;
-import vn.edu.huce.iic.bts_ops_platform.mcp.dto.hopdong.HopDongDoiTuongResponse;
-import vn.edu.huce.iic.bts_ops_platform.mcp.repository.KhuVucRepository;
+import vn.edu.huce.iic.bts_ops_platform.mcp.modules.hopdong.dto.HopDongDoiTuongResponse;
+import vn.edu.huce.iic.bts_ops_platform.mcp.common.repository.KhuVucRepository;
 
 import java.util.Collection;
 import java.util.List;

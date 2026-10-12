@@ -5,11 +5,11 @@ import org.springframework.stereotype.Service;
 import vn.edu.huce.iic.bts_ops_platform.mcp.common.cache.CacheService;
 import vn.edu.huce.iic.bts_ops_platform.mcp.common.dto.AppException;
 import vn.edu.huce.iic.bts_ops_platform.mcp.common.security.DataScopeService;
-import vn.edu.huce.iic.bts_ops_platform.mcp.dto.khuvuc.KhuVucInfo;
+import vn.edu.huce.iic.bts_ops_platform.mcp.common.dto.KhuVucInfo;
 import vn.edu.huce.iic.bts_ops_platform.mcp.exception.ToolErrorCode;
 import vn.edu.huce.iic.bts_ops_platform.mcp.helps.UuidHelp;
-import vn.edu.huce.iic.bts_ops_platform.mcp.dto.khuvuc.KhuVucInfoProjection;
-import vn.edu.huce.iic.bts_ops_platform.mcp.repository.KhuVucRepository;
+import vn.edu.huce.iic.bts_ops_platform.mcp.common.dto.KhuVucInfoProjection;
+import vn.edu.huce.iic.bts_ops_platform.mcp.common.repository.KhuVucRepository;
 import vn.edu.huce.iic.bts_ops_platform.mcp.support.ResolveSupport;
 
 import java.time.Duration;

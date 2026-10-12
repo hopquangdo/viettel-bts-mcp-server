@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import vn.edu.huce.iic.bts_ops_platform.mcp.common.dto.ApiResponse;
-import vn.edu.huce.iic.bts_ops_platform.mcp.dto.common.McpToolInfo;
+import vn.edu.huce.iic.bts_ops_platform.mcp.common.dto.McpToolInfo;
 
 import java.util.List;
 

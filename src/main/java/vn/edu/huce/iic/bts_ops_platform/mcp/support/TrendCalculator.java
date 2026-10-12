@@ -1,6 +1,6 @@
 package vn.edu.huce.iic.bts_ops_platform.mcp.support;
 
-import vn.edu.huce.iic.bts_ops_platform.mcp.dto.common.TrendInfo;
+import vn.edu.huce.iic.bts_ops_platform.mcp.common.dto.TrendInfo;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;

@@ -4,10 +4,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import vn.edu.huce.iic.bts_ops_platform.mcp.common.cache.CacheService;
 import vn.edu.huce.iic.bts_ops_platform.mcp.common.dto.AppException;
-import vn.edu.huce.iic.bts_ops_platform.mcp.dto.tinh.TinhInfo;
+import vn.edu.huce.iic.bts_ops_platform.mcp.common.dto.TinhInfo;
 import vn.edu.huce.iic.bts_ops_platform.mcp.exception.ToolErrorCode;
 import vn.edu.huce.iic.bts_ops_platform.mcp.helps.UuidHelp;
-import vn.edu.huce.iic.bts_ops_platform.mcp.repository.TinhThanhRepository;
+import vn.edu.huce.iic.bts_ops_platform.mcp.common.repository.TinhThanhRepository;
 
 import java.time.Duration;
 import java.util.UUID;
