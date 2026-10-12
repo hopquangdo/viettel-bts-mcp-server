@@ -12,7 +12,7 @@ public final class ToolParamDescriptions {
 
     public static final String NHA_THAU = "Nhà thầu cần lọc: ID, mã hoặc tên (ưu tiên truyền mã hoặc ID; tên mơ hồ sẽ báo lỗi kèm danh sách ứng viên). Ví dụ: Royal, Anh Tu; truyền đúng tên người dùng nói, hệ thống tự tra gần đúng, không cần hỏi lại";
 
-    public static final String KHU_VUC = "Khu vực cần lọc: ID, mã hoặc tên (ưu tiên truyền mã hoặc ID; tên mơ hồ sẽ báo lỗi kèm danh sách ứng viên). Mã hợp lệ: TTKV1, TTKV2, TTKV3. Người dùng viết \"kv1\", \"khu vực 1\", \"TTKV 1\" thì truyền TTKV1, không hỏi lại";
+    public static final String KHU_VUC = "Khu vực cần lọc: ID, mã hoặc tên (ưu tiên truyền mã hoặc ID; tên mơ hồ sẽ báo lỗi kèm danh sách ứng viên). Mã hợp lệ: TTKV1, TTKV2, TTKV3, KV1, KV2, KV3,... Tự suy ra mã không hỏi lại";
 
     public static final String TINH_THANH = "Tỉnh/thành cần lọc: ID, mã hoặc tên (ưu tiên truyền mã hoặc ID; tên mơ hồ sẽ báo lỗi kèm danh sách ứng viên). Ví dụ: BNH (Bắc Ninh), NAN (Nghệ An), THA (Thanh Hóa)";
 

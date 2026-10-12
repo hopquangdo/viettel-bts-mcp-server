@@ -81,10 +81,12 @@ public class PhanCongServiceImpl implements PhanCongService {
                          UUID doiTuongId, boolean doiTuongCuThe, String giaiDoanLoc, Instant ngayTaoFrom, Instant ngayTaoTo) {
     }
 
-    private record Catalog(Map<UUID, String> khuVucById, Map<UUID, String> tinhThanhById) {
+    /** id -> [mã, tên]. */
+    private record Catalog(Map<UUID, String[]> khuVucById, Map<UUID, String[]> tinhThanhById) {
     }
 
     private record EnrichFutures(CompletableFuture<Map<UUID, String[]>> hopDong,
+                                 CompletableFuture<Map<UUID, String[]>> doiTuong,
                                  CompletableFuture<Set<UUID>> coVuongMo) {
     }
 
@@ -211,7 +213,8 @@ public class PhanCongServiceImpl implements PhanCongService {
     }
 
     private CompletableFuture<Catalog> catalogAsync() {
-        return parallel.async(this::khuVucTenById).thenCombine(parallel.async(this::tinhThanhTenById), Catalog::new);
+        return parallel.async(() -> idToMaTen(phanCongToolRepository.findAllKhuVucIdMaTen()))
+                .thenCombine(parallel.async(() -> idToMaTen(phanCongToolRepository.findAllTinhThanhIdMaTen())), Catalog::new);
     }
 
     private CompletableFuture<PhanCongToolThongKe> tongQuanAsync(Scope s) {
@@ -333,61 +336,61 @@ public class PhanCongServiceImpl implements PhanCongService {
         List<UUID> doiTuongIds = content.stream().map(PhanCong::getHopDongDoiTuongId).filter(java.util.Objects::nonNull).distinct().toList();
         var hopDong = hopDongIds.isEmpty()
                 ? CompletableFuture.completedFuture(Map.<UUID, String[]>of())
-                : parallel.async(() -> {
-                    Map<UUID, String[]> result = new HashMap<>();
-                    for (Object[] row : phanCongToolRepository.findHopDongIdMaTenByIds(hopDongIds)) {
-                        result.put((UUID) row[0], new String[]{(String) row[1], (String) row[2]});
-                    }
-                    return result;
-                });
+                : parallel.async(() -> idToMaTen(phanCongToolRepository.findHopDongIdMaTenByIds(hopDongIds)));
+        var doiTuong = doiTuongIds.isEmpty()
+                ? CompletableFuture.completedFuture(Map.<UUID, String[]>of())
+                : parallel.async(() -> idToMaTen(phanCongToolRepository.findDoiTuongMaLoaiByIds(doiTuongIds)));
         var coVuongMo = doiTuongIds.isEmpty()
                 ? CompletableFuture.completedFuture(Set.<UUID>of())
                 : parallel.async(() -> Set.copyOf(phanCongToolRepository.findDoiTuongIdsCoVuongDangMo(doiTuongIds)));
-        return new EnrichFutures(hopDong, coVuongMo);
+        return new EnrichFutures(hopDong, doiTuong, coVuongMo);
     }
 
     private CompletableFuture<PagedResult<PhanCongToolItem>> toPagedResult(List<PhanCong> content, int page, int pageSize, long total,
                                                                           CompletableFuture<Catalog> catalog) {
         EnrichFutures enrich = enrichAsync(content);
-        return CompletableFuture.allOf(enrich.hopDong(), enrich.coVuongMo(), catalog).thenApply(v -> {
+        return CompletableFuture.allOf(enrich.hopDong(), enrich.doiTuong(), enrich.coVuongMo(), catalog).thenApply(v -> {
             Set<UUID> coVuongMo = enrich.coVuongMo().join();
             Map<UUID, String[]> hopDongById = enrich.hopDong().join();
+            Map<UUID, String[]> doiTuongById = enrich.doiTuong().join();
             Catalog c = catalog.join();
             List<PhanCongToolItem> items = content.stream()
-                    .map(entity -> toItem(entity, coVuongMo, hopDongById, c.khuVucById(), c.tinhThanhById())).toList();
+                    .map(entity -> toItem(entity, coVuongMo, hopDongById, doiTuongById, c)).toList();
             return PagedResult.of(items, page, pageSize, total);
         });
     }
 
-    private Map<UUID, String> khuVucTenById() {
-        Map<UUID, String> result = new HashMap<>();
-        for (Object[] row : phanCongToolRepository.findAllKhuVucIdTen()) {
-            result.put((UUID) row[0], (String) row[1]);
+    /** Rows [id, mã, tên] -> id -> [mã, tên]. */
+    private static Map<UUID, String[]> idToMaTen(List<Object[]> rows) {
+        Map<UUID, String[]> result = new HashMap<>();
+        for (Object[] row : rows) {
+            result.put((UUID) row[0], new String[]{(String) row[1], (String) row[2]});
         }
         return result;
     }
 
-    private Map<UUID, String> tinhThanhTenById() {
-        Map<UUID, String> result = new HashMap<>();
-        for (Object[] row : phanCongToolRepository.findAllTinhThanhIdTen()) {
-            result.put((UUID) row[0], (String) row[1]);
-        }
-        return result;
+    private static String[] maTen(Map<UUID, String[]> byId, UUID id) {
+        String[] value = id == null ? null : byId.get(id);
+        return value != null ? value : new String[]{null, null};
     }
 
     private PhanCongToolItem toItem(PhanCong entity, Set<UUID> coVuongMo, Map<UUID, String[]> hopDongById,
-                                     Map<UUID, String> khuVucById, Map<UUID, String> tinhThanhById) {
+                                     Map<UUID, String[]> doiTuongById, Catalog catalog) {
         PhanCongToolItem item = new PhanCongToolItem();
         item.setId(entity.getId());
-        String[] hopDong = hopDongById.get(entity.getHopDongId());
-        item.setHopDong(HopDongInfo.of(entity.getHopDongId(),
-                hopDong != null ? hopDong[0] : null, hopDong != null ? hopDong[1] : null));
-        item.setHopDongDoiTuongId(entity.getHopDongDoiTuongId());
+        String[] hopDong = maTen(hopDongById, entity.getHopDongId());
+        item.setHopDong(HopDongInfo.of(entity.getHopDongId(), hopDong[0], hopDong[1]));
+        if (entity.getHopDongDoiTuongId() != null) {
+            String[] doiTuong = maTen(doiTuongById, entity.getHopDongDoiTuongId());
+            item.setDoiTuong(new DoiTuongInfo(entity.getHopDongDoiTuongId(), doiTuong[0], doiTuong[1]));
+        }
         item.setNhaThau(entity.getNhaThau());
         item.setGiaiDoan(entity.getGiaiDoan());
-        item.setKhuVuc(GeoRefResponse.of(entity.getKhuVucId(), null, khuVucById.get(entity.getKhuVucId())));
+        String[] khuVuc = maTen(catalog.khuVucById(), entity.getKhuVucId());
+        item.setKhuVuc(GeoRefResponse.of(entity.getKhuVucId(), khuVuc[0], khuVuc[1]));
         item.setMaVung(entity.getMaVung());
-        item.setTinhThanh(GeoRefResponse.of(entity.getTinhThanhId(), null, tinhThanhById.get(entity.getTinhThanhId())));
+        String[] tinhThanh = maTen(catalog.tinhThanhById(), entity.getTinhThanhId());
+        item.setTinhThanh(GeoRefResponse.of(entity.getTinhThanhId(), tinhThanh[0], tinhThanh[1]));
         item.setHoatDong(entity.getHoatDong());
         item.setNgayTao(entity.getNgayTao());
         item.setNgayCapNhat(entity.getNgayCapNhat());

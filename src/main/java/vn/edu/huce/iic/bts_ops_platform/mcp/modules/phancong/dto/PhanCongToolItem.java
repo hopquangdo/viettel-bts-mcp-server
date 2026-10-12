@@ -7,12 +7,15 @@ import vn.edu.huce.iic.bts_ops_platform.mcp.modules.hopdong.dto.HopDongInfo;
 import java.time.Instant;
 import java.util.UUID;
 
+import vn.edu.huce.iic.bts_ops_platform.mcp.modules.doituong.dto.DoiTuongInfo;
+
 /** 1 dòng phân công trả về cho MCP tool (search_business_data / find_business_issues entity=PHAN_CONG). */
 @Data
 public class PhanCongToolItem {
     private UUID id;
     private HopDongInfo hopDong;
-    private UUID hopDongDoiTuongId;
+    /** Đối tượng được phân công: ma = mã thật (thuộc tính khoá chính), ten = loại (Tuyến/Trạm). */
+    private DoiTuongInfo doiTuong;
     private String nhaThau;
     private String giaiDoan;
     private GeoRefResponse khuVuc;

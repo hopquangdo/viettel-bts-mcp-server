@@ -419,6 +419,9 @@ public class DoiTuongTonServiceImpl implements DoiTuongTonService {
                 .giaTriHd(row[4] != null ? ((Number) row[4]).longValue() : null)
                 .ngayHoanThanh((LocalDate) row[5])
                 .sanLuongHieuLuc(NumberUtil.toBigDecimal(row[6]))
+                .maTram((String) row[7])
+                .khuVuc((String) row[8])
+                .nhaThau((String) row[9])
                 .build();
     }
 

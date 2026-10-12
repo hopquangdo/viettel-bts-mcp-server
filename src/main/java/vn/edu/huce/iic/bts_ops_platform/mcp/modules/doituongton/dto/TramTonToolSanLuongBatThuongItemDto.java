@@ -18,6 +18,9 @@ import java.util.UUID;
 public class TramTonToolSanLuongBatThuongItemDto {
     private UUID id;
     private HopDongInfo hopDong;
+    private String maTram;
+    private String khuVuc;
+    private String nhaThau;
     private Long giaTriHd;
     private LocalDate ngayHoanThanh;
     private BigDecimal sanLuongHieuLuc;

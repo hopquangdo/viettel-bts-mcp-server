@@ -1,6 +1,7 @@
 package vn.edu.huce.iic.bts_ops_platform.mcp.modules.bienban;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import vn.edu.huce.iic.bts_ops_platform.mcp.common.repository.DoiTuongSql;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.Query;
@@ -28,7 +29,8 @@ public interface BienBanToolRepository extends JpaRepository<BienBan, UUID> {
      * một biên bản đã "hủy hiệu lực" (hoat_dong=false) không nên tính là "đã khảo sát xong".
      */
     @Query(value = """
-            SELECT COALESCE(dt.ten, dt.ma, '—') AS ma_tram, COALESCE(kv.ten, '—') AS khu_vuc, h.ma_hop_dong
+            SELECT COALESCE(""" + DoiTuongSql.MA_DOI_TUONG + """
+                   , '—') AS ma_tram, COALESCE(kv.ten, '—') AS khu_vuc, h.ma_hop_dong
             FROM hop_dong_doi_tuong d
             INNER JOIN hop_dong h ON h.id = d.hop_dong_id AND h.ngay_xoa IS NULL AND h.hoat_dong = TRUE
             LEFT JOIN doi_tuong_quan_ly dt ON dt.id = d.doi_tuong_quan_ly_id AND dt.ngay_xoa IS NULL

@@ -5,6 +5,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import vn.edu.huce.iic.bts_ops_platform.mcp.common.repository.DoiTuongSql;
 import vn.edu.huce.iic.bts_ops_platform.mcp.modules.phancong.dto.ChuaPhanCongRow;
 import vn.edu.huce.iic.bts_ops_platform.mcp.modules.phancong.dto.NguoiDungRow;
 import vn.edu.huce.iic.bts_ops_platform.mcp.modules.phancong.dto.TongQuanDoiTuongRow;
@@ -22,7 +23,8 @@ public interface PhanCongToolRepository extends JpaRepository<HopDongDoiTuong, U
 
     /** Đối tượng chưa phân công nhà thầu (nha_thau_id IS NULL). Lọc theo hopDongId / khuVucId (đã resolve) nếu truyền. */
     @Query(value = """
-            SELECT dt.ma AS maDoiTuong, COALESCE(dt.ten, dt.ma) AS tenDoiTuong,
+            SELECT """ + DoiTuongSql.MA_DOI_TUONG + """
+                   AS maDoiTuong, COALESCE(dt.ten, dt.ma) AS tenDoiTuong,
                    h.ma_hop_dong AS maHopDong, h.ten AS tenHopDong,
                    kv.ten AS khuVuc, tt.ten AS tinh
             FROM hop_dong_doi_tuong d
@@ -105,12 +107,22 @@ public interface PhanCongToolRepository extends JpaRepository<HopDongDoiTuong, U
     List<Object[]> findHopDongIdMaTenByIds(@Param("ids") java.util.Collection<UUID> ids);
 
     /** id -> tên khu vực — bảng danh mục nhỏ, dùng để enrich PhanCongToolItem.khuVucId. */
-    @Query(value = "SELECT id, ten FROM khu_vuc", nativeQuery = true)
-    List<Object[]> findAllKhuVucIdTen();
+    @Query(value = "SELECT id, ma, ten FROM khu_vuc", nativeQuery = true)
+    List<Object[]> findAllKhuVucIdMaTen();
 
     /** id -> tên tỉnh thành — bảng danh mục nhỏ, dùng để enrich PhanCongToolItem.tinhThanhId. */
-    @Query(value = "SELECT id, ten FROM tinh_thanh", nativeQuery = true)
-    List<Object[]> findAllTinhThanhIdTen();
+    @Query(value = "SELECT id, ma, ten FROM tinh_thanh", nativeQuery = true)
+    List<Object[]> findAllTinhThanhIdMaTen();
+
+    /** Mã thật (giá trị thuộc tính khoá chính) + loại (Tuyến/Trạm) của các đối tượng theo id. */
+    @Query(value = """
+            SELECT d.id, """ + DoiTuongSql.MA_DOI_TUONG + """
+             AS ma, COALESCE(q.ten, q.ma) AS loai
+            FROM hop_dong_doi_tuong d
+            LEFT JOIN doi_tuong_quan_ly q ON q.id = d.doi_tuong_quan_ly_id
+            WHERE d.id IN (:ids)
+            """, nativeQuery = true)
+    List<Object[]> findDoiTuongMaLoaiByIds(@Param("ids") java.util.Collection<UUID> ids);
 
     /**
      * Thống kê tổng quan theo đối tượng (nguồn chân lý hop_dong_doi_tuong) - bám REST

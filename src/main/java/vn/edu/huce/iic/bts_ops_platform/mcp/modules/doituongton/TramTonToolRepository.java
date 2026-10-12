@@ -1,6 +1,7 @@
 package vn.edu.huce.iic.bts_ops_platform.mcp.modules.doituongton;
 
 import org.springframework.data.domain.Page;
+import vn.edu.huce.iic.bts_ops_platform.mcp.common.repository.DoiTuongSql;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -202,7 +203,8 @@ public interface TramTonToolRepository extends JpaRepository<HopDongDoiTuong, UU
 
     /** Danh sách đối tượng tồn (đã hoàn thành thi công, chờ quyết toán — cùng tập với tổng quan) theo bộ lọc id đã resolve (nhà thầu/hợp đồng/khu vực/đối tượng). row khớp CHO_QUYET_TOAN_CANDIDATE + enrich tên. */
     @Query(value = """
-            SELECT c.id, c.hop_dong_id, c.ma_hop_dong, c.ten_hop_dong, COALESCE(dt.ten, dt.ma, '—') AS ma_tram,
+            SELECT c.id, c.hop_dong_id, c.ma_hop_dong, c.ten_hop_dong, COALESCE(""" + DoiTuongSql.MA_DOI_TUONG_C + """
+                   , '—') AS ma_tram,
                    COALESCE(kv.ten, '—') AS khu_vuc, COALESCE(nd.ho_ten, '—') AS nha_thau,
                    c.san_luong_hieu_luc, c.resolved_ngay_ht
             FROM (""" + CHO_QUYET_TOAN_CANDIDATE + """
@@ -247,7 +249,8 @@ public interface TramTonToolRepository extends JpaRepository<HopDongDoiTuong, UU
 
     /** Danh sách tab "Chưa pháp lý": đối tượng hoạt động thuộc hợp đồng chưa đủ pháp lý (cùng tập với tổng quan). Dòng cùng dạng với {@code search}, ngày mốc luôn null. */
     @Query(value = """
-            SELECT c.id, c.hop_dong_id, c.ma_hop_dong, c.ten_hop_dong, COALESCE(dt.ten, dt.ma, '—') AS ma_tram,
+            SELECT c.id, c.hop_dong_id, c.ma_hop_dong, c.ten_hop_dong, COALESCE(""" + DoiTuongSql.MA_DOI_TUONG_C + """
+                   , '—') AS ma_tram,
                    COALESCE(kv.ten, '—') AS khu_vuc, COALESCE(nd.ho_ten, '—') AS nha_thau,
                    c.gia_tri, CAST(NULL AS date) AS ngay_moc
             FROM (
@@ -287,7 +290,8 @@ public interface TramTonToolRepository extends JpaRepository<HopDongDoiTuong, UU
 
     /** Danh sách tab "Vướng mắc": vướng mắc đang mở quá ngưỡng, mỗi đối tượng 1 dòng (cùng tập với tổng quan). Ngày mốc = ngày tạo vướng mắc. */
     @Query(value = """
-            SELECT c.id, c.hop_dong_id, c.ma_hop_dong, c.ten_hop_dong, COALESCE(dt.ten, dt.ma, '—') AS ma_tram,
+            SELECT c.id, c.hop_dong_id, c.ma_hop_dong, c.ten_hop_dong, COALESCE(""" + DoiTuongSql.MA_DOI_TUONG_C + """
+                   , '—') AS ma_tram,
                    COALESCE(kv.ten, '—') AS khu_vuc, COALESCE(nd.ho_ten, '—') AS nha_thau,
                    CASE WHEN COALESCE(c.san_luong_hieu_luc, 0) > 0 THEN c.san_luong_hieu_luc ELSE 0 END AS gia_tri,
                    (c.ngay_tao AT TIME ZONE 'Asia/Ho_Chi_Minh')::date AS ngay_moc
@@ -343,7 +347,8 @@ public interface TramTonToolRepository extends JpaRepository<HopDongDoiTuong, UU
     /** Đã khởi công (ngay_thi_cong_gan_nhat set) nhưng chưa hoàn thành, quá N ngày không cập nhật sản lượng, trong phạm vi bộ lọc. */
     @Query(value = """
             SELECT d.id, d.hop_dong_id, h.ma_hop_dong, h.ten AS ten_hop_dong,
-                   COALESCE(dt.ten, dt.ma, '—') AS ma_tram,
+                   COALESCE(""" + DoiTuongSql.MA_DOI_TUONG + """
+                   , '—') AS ma_tram,
                    COALESCE(kv.ten, '—') AS khu_vuc, COALESCE(nd.ho_ten, '—') AS nha_thau,
                    d.ngay_thi_cong_gan_nhat
             FROM hop_dong_doi_tuong d
@@ -377,7 +382,7 @@ public interface TramTonToolRepository extends JpaRepository<HopDongDoiTuong, UU
      * (cột {@code soTramBatThuong} khớp FE): ngưỡng hợp đồng = tổng thành tiền thi công × hệ số (GCCC: hệ số riêng của hợp đồng,
      * mặc định theo danh mục loại GCCC, không có thì 2.0; loại khác: hệ số của loại hợp đồng), chia đều cho số trạm đang hoạt động của hợp đồng.
      * Chỉ lọc danh sách trạm hiển thị theo bộ lọc; ngưỡng vẫn tính trên toàn bộ trạm của hợp đồng (không đổi theo bộ lọc).
-     * row: [id, hopDongId, maHopDong, tenHopDong, giaTriHd, ngayHtTc, sanLuongHieuLuc].
+     * row: [id, hopDongId, maHopDong, tenHopDong, giaTriHd, ngayHtTc, sanLuongHieuLuc, maTram, khuVuc, nhaThau].
      */
     @Query(value = """
             WITH tram AS (
@@ -394,9 +399,14 @@ public interface TramTonToolRepository extends JpaRepository<HopDongDoiTuong, UU
                        END AS nguong_hd
                 FROM hop_dong h WHERE h.ngay_xoa IS NULL AND h.hoat_dong = TRUE
             )
-            SELECT d.id, d.hop_dong_id, n.ma_hop_dong, n.ten, n.gia_tri_hd, d.ngay_ht_tc, d.san_luong_hieu_luc
+            SELECT d.id, d.hop_dong_id, n.ma_hop_dong, n.ten, n.gia_tri_hd, d.ngay_ht_tc, d.san_luong_hieu_luc,
+                   COALESCE(""" + DoiTuongSql.MA_DOI_TUONG + """
+                   , '—') AS ma_tram,
+                   COALESCE(kv.ten, '—') AS khu_vuc, COALESCE(nd.ho_ten, '—') AS nha_thau
             FROM hop_dong_doi_tuong d
             JOIN nguong n ON n.id = d.hop_dong_id
+            LEFT JOIN khu_vuc kv ON kv.id = d.khu_vuc_id
+            LEFT JOIN nguoi_dung nd ON nd.id = d.nha_thau_id
             JOIN tram t ON t.hop_dong_id = d.hop_dong_id
             WHERE d.hoat_dong = TRUE AND d.ngay_xoa IS NULL
               AND n.nguong_hd IS NOT NULL AND n.nguong_hd > 0 AND t.tram_tong > 0
@@ -443,7 +453,8 @@ public interface TramTonToolRepository extends JpaRepository<HopDongDoiTuong, UU
      * pháp lý hợp đồng (trang_thai_phap_ly=2), không vướng mắc mở, đã có sản lượng hiệu lực > 0.
      */
     @Query(value = """
-            SELECT dt.ma AS maDoiTuong, h.ma_hop_dong AS maHopDong,
+            SELECT """ + DoiTuongSql.MA_DOI_TUONG + """
+                   AS maDoiTuong, h.ma_hop_dong AS maHopDong,
                    COALESCE(kv.ten, '—') AS khuVuc, COALESCE(nd.ho_ten, '—') AS nhaThau,
                    (h.trang_thai_phap_ly IS NULL OR h.trang_thai_phap_ly <> 2) AS thieuPhapLy,
                    d.co_vuong_mac_mo AS dangVuongMac,

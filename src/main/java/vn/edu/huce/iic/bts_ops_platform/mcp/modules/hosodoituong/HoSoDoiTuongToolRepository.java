@@ -1,6 +1,7 @@
 package vn.edu.huce.iic.bts_ops_platform.mcp.modules.hosodoituong;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import vn.edu.huce.iic.bts_ops_platform.mcp.common.repository.DoiTuongSql;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.Query;
@@ -40,7 +41,8 @@ public interface HoSoDoiTuongToolRepository extends JpaRepository<HopDongDoiTuon
             @Param("trangThaiIds") String trangThaiIds, @Param("coNhomUuTien") Boolean coNhomUuTien);
 
     @Query(value = """
-            SELECT dt.ma AS maDoiTuong, dt.ten AS tenDoiTuong, h.ma_hop_dong AS maHopDong,
+            SELECT """ + DoiTuongSql.MA_DOI_TUONG + """
+                   AS maDoiTuong, dt.ten AS tenDoiTuong, h.ma_hop_dong AS maHopDong,
                    COALESCE(h.ten, h.ma_hop_dong) AS tenHopDong,
                    d.ngay_ban_giao_mat_bang AS ngayBanGiaoMatBang,
                    d.trang_thai_vat_tu_a AS trangThaiVatTuA, d.trang_thai_vat_tu_b AS trangThaiVatTuB,
@@ -57,7 +59,8 @@ public interface HoSoDoiTuongToolRepository extends JpaRepository<HopDongDoiTuon
     ThuocTinhProjection thuocTinh(@Param("doiTuongId") UUID doiTuongId, @Param("hopDongId") UUID hopDongId);
 
     @Query(value = """
-            SELECT dt.ma AS maDoiTuong, dt.ten AS tenDoiTuong, kv.ten AS khuVuc, nd.ho_ten AS nhaThau
+            SELECT """ + DoiTuongSql.MA_DOI_TUONG + """
+                   AS maDoiTuong, dt.ten AS tenDoiTuong, kv.ten AS khuVuc, nd.ho_ten AS nhaThau
             FROM hop_dong_doi_tuong d
             INNER JOIN hop_dong h ON h.id = d.hop_dong_id AND h.ngay_xoa IS NULL AND h.hoat_dong = TRUE
             LEFT JOIN doi_tuong_quan_ly dt ON dt.id = d.doi_tuong_quan_ly_id AND dt.ngay_xoa IS NULL
@@ -88,7 +91,8 @@ public interface HoSoDoiTuongToolRepository extends JpaRepository<HopDongDoiTuon
             @Param("trangThaiIds") String trangThaiIds, @Param("coNhomUuTien") Boolean coNhomUuTien, Pageable pageable);
 
     @Query(value = """
-            SELECT dt.ma AS maDoiTuong, dt.ten AS tenDoiTuong, h.ma_hop_dong AS maHopDong,
+            SELECT """ + DoiTuongSql.MA_DOI_TUONG + """
+                   AS maDoiTuong, dt.ten AS tenDoiTuong, h.ma_hop_dong AS maHopDong,
                    d.ngay_ban_giao_mat_bang AS ngayBanGiaoMatBang
             FROM hop_dong_doi_tuong d
             INNER JOIN hop_dong h ON h.id = d.hop_dong_id AND h.ngay_xoa IS NULL AND h.hoat_dong = TRUE
@@ -128,7 +132,8 @@ public interface HoSoDoiTuongToolRepository extends JpaRepository<HopDongDoiTuon
 
     /** Đối tượng khởi công trong kỳ: ngay_khoi_cong (ngày ghi nhận sản lượng done đầu tiên, business-api denormalize) nằm trong [fromDate, toDate]. */
     @Query(value = """
-            SELECT dt.ma AS maDoiTuong, dt.ten AS tenDoiTuong, h.ma_hop_dong AS maHopDong,
+            SELECT """ + DoiTuongSql.MA_DOI_TUONG + """
+                   AS maDoiTuong, dt.ten AS tenDoiTuong, h.ma_hop_dong AS maHopDong,
                    kv.ten AS khuVuc, nd.ho_ten AS nhaThau, d.ngay_khoi_cong AS ngayKhoiCong
             FROM hop_dong_doi_tuong d
             INNER JOIN hop_dong h ON h.id = d.hop_dong_id AND h.ngay_xoa IS NULL AND h.hoat_dong = TRUE
