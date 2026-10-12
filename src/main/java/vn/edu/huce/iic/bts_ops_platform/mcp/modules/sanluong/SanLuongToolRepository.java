@@ -464,7 +464,7 @@ public interface SanLuongToolRepository extends JpaRepository<SanLuong, UUID> {
             @Param("tinhThanhId") UUID tinhThanhId, @Param("loaiHopDongId") UUID loaiHopDongId);
 
     /**
-     * Nhà thầu đang phụ trách >=1 đối tượng hoạt động nhưng KHÔNG có bản ghi san_luong 'done' nào
+     * Nhà thầu đang phụ trách >=1 đối tượng hoạt động nhưng KHÔNG có bản ghi san_luong billable (done/survey/design)
      * trong [fromDate, toDate] cho bất kỳ đối tượng nào mình phụ trách (lọc theo bộ lọc thu hẹp nếu có).
      */
     @Query(value = """
@@ -474,7 +474,7 @@ public interface SanLuongToolRepository extends JpaRepository<SanLuong, UUID> {
                        COUNT(*) FILTER (WHERE EXISTS (
                            SELECT 1 FROM san_luong s
                            WHERE s.hop_dong_doi_tuong_id = d.id AND s.ngay_xoa IS NULL AND s.hoat_dong = TRUE
-                             AND s.trang_thai = 'done'
+                             AND s.trang_thai IN ('done', 'survey', 'design')
                              AND s.ngay_thuc_hien BETWEEN :fromDate AND :toDate
                        )) AS soDaBao
                 FROM hop_dong_doi_tuong d
@@ -508,7 +508,7 @@ public interface SanLuongToolRepository extends JpaRepository<SanLuong, UUID> {
                      COUNT(*) FILTER (WHERE EXISTS (
                    SELECT 1 FROM san_luong s
                    WHERE s.hop_dong_doi_tuong_id = d.id AND s.ngay_xoa IS NULL AND s.hoat_dong = TRUE
-                     AND s.trang_thai = 'done'
+                     AND s.trang_thai IN ('done', 'survey', 'design')
                      AND s.ngay_thuc_hien BETWEEN :fromDate AND :toDate
                      )) AS soDaBao
               FROM hop_dong_doi_tuong d
@@ -531,10 +531,11 @@ public interface SanLuongToolRepository extends JpaRepository<SanLuong, UUID> {
             @Param("tinhThanhId") UUID tinhThanhId, @Param("loaiHopDongId") UUID loaiHopDongId);
 
     /**
-     * Nhà thầu đang phụ trách >=1 đối tượng hoạt động và CÓ ÍT NHẤT 1 bản ghi san_luong 'done'
+     * Nhà thầu đang phụ trách >=1 đối tượng hoạt động và CÓ ÍT NHẤT 1 bản ghi san_luong billable (done/survey/design)
      * trong [fromDate, toDate] cho đối tượng mình phụ trách (lọc theo bộ lọc thu hẹp nếu có) — đối
      * xứng với {@link #findNhaThauChuaBaoTrongKy}. {@code giaTriDaBao} là tổng giá trị các bản ghi
-     * 'done' trong kỳ của nhà thầu đó (không giới hạn theo đối tượng đã lọc riêng lẻ ở trên).
+     * billable trong kỳ của nhà thầu đó (không giới hạn theo đối tượng đã lọc riêng lẻ ở trên).
+     * Khớp {@code isBillableStatus} của business-api (SanLuongServiceImpl).
      */
     @Query(value = """
             WITH agg AS (
@@ -543,7 +544,7 @@ public interface SanLuongToolRepository extends JpaRepository<SanLuong, UUID> {
                        COUNT(*) FILTER (WHERE EXISTS (
                            SELECT 1 FROM san_luong s
                            WHERE s.hop_dong_doi_tuong_id = d.id AND s.ngay_xoa IS NULL AND s.hoat_dong = TRUE
-                             AND s.trang_thai = 'done'
+                             AND s.trang_thai IN ('done', 'survey', 'design')
                              AND s.ngay_thuc_hien BETWEEN :fromDate AND :toDate
                        )) AS soDaBao
                 FROM hop_dong_doi_tuong d
@@ -562,7 +563,7 @@ public interface SanLuongToolRepository extends JpaRepository<SanLuong, UUID> {
                 FROM san_luong s
                 JOIN hop_dong_doi_tuong d ON d.id = s.hop_dong_doi_tuong_id AND d.ngay_xoa IS NULL AND d.hoat_dong = TRUE
                 INNER JOIN hop_dong h ON h.id = d.hop_dong_id AND h.ngay_xoa IS NULL AND h.hoat_dong = TRUE
-                WHERE s.ngay_xoa IS NULL AND s.hoat_dong = TRUE AND s.trang_thai = 'done'
+                WHERE s.ngay_xoa IS NULL AND s.hoat_dong = TRUE AND s.trang_thai IN ('done', 'survey', 'design')
                   AND s.ngay_thuc_hien BETWEEN :fromDate AND :toDate
                   AND (CAST(:nhaThauId AS uuid) IS NULL OR d.nha_thau_id = CAST(:nhaThauId AS uuid))
                   AND (CAST(:hopDongId AS uuid) IS NULL OR d.hop_dong_id = CAST(:hopDongId AS uuid))
@@ -594,7 +595,7 @@ public interface SanLuongToolRepository extends JpaRepository<SanLuong, UUID> {
                      COUNT(*) FILTER (WHERE EXISTS (
                    SELECT 1 FROM san_luong s
                    WHERE s.hop_dong_doi_tuong_id = d.id AND s.ngay_xoa IS NULL AND s.hoat_dong = TRUE
-                     AND s.trang_thai = 'done'
+                     AND s.trang_thai IN ('done', 'survey', 'design')
                      AND s.ngay_thuc_hien BETWEEN :fromDate AND :toDate
                      )) AS soDaBao
               FROM hop_dong_doi_tuong d

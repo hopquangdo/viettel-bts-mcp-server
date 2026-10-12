@@ -107,7 +107,7 @@ public final class SanLuongTools implements McpToolGroup {
         @ToolParam(description = ToolParamDescriptions.LOAI_HOP_DONG, required = false) String loaiHopDong,
         @ToolParam(description = ToolParamDescriptions.FROM_DATE, required = false) LocalDate fromDate,
         @ToolParam(description = ToolParamDescriptions.TO_DATE, required = false) LocalDate toDate,
-        @ToolParam(description = "Trạng thái báo sản lượng (bắt buộc): da_bao = nhà thầu đã báo sản lượng trong kỳ, chua_bao = nhà thầu đang phụ trách đối tượng nhưng chưa báo sản lượng trong kỳ") String trangThai,
+        @ToolParam(description = "Trạng thái báo sản lượng (bắt buộc): da_bao = nhà thầu đã báo sản lượng trong kỳ (có bản ghi done/survey/design có ngày thực hiện trong kỳ), chua_bao = nhà thầu đang phụ trách đối tượng nhưng chưa có bản ghi nào như vậy trong kỳ") String trangThai,
         @ToolParam(description = ToolParamDescriptions.PAGE, required = false) Integer page,
         @ToolParam(description = ToolParamDescriptions.PAGE_SIZE, required = false) Integer pageSize) {
     return service.nhaThauBaoCao(new SanLuongFilter(null, hopDong, nhaThau, khuVuc, tinhThanh, loaiHopDong, fromDate, toDate), trangThai, page, pageSize);
