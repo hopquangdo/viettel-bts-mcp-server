@@ -39,7 +39,8 @@ public final class SanLuongTools implements McpToolGroup {
         Tổng quan sản lượng trong kỳ theo khu vực, tỉnh, nhà thầu, hợp đồng
         Dùng khi: sản lượng tháng này bao nhiêu; làm được bao nhiêu trong kỳ; sản lượng hôm nay; tăng hay giảm so với kỳ trước; bao nhiêu đối tượng có sản lượng
         Trả về: tổng giá trị, giá trị hôm nay, số đối tượng có/chưa có sản lượng, tiến độ hoàn thành hạng mục, so với kỳ trước (soVoiKyTruoc), số vướng mắc đang mở. Chỉ số liệu tổng hợp.
-        Lưu ý: không truyền ngày = toàn bộ thời gian. Màn Sản lượng Thi công: "Tổng đối tượng" = tongSoDoiTuong (GỒM CẢ đối tượng chưa có sản lượng), "Có sản lượng" = soDoiTuongCoSanLuong, "Tổng SL kỳ lọc" = giaTriTrongKy, "SL hôm nay" = giaTriHomNay, "Vướng mắc" = soVuongMacDangMo; hỏi "bao nhiêu đối tượng có sản lượng" thì trả soDoiTuongCoSanLuong. Dashboard: "Tổng sản lượng năm" / "Sản lượng tháng" = giaTriHoanThanh (kỳ cả năm / 1 tháng), so với kỳ trước = tangTruongHoanThanh; giaTriTrongKy là số của màn Sản lượng thi công (2 cách tính khác nhau, chọn theo màn người dùng hỏi).
+        Lưu ý: không truyền ngày = toàn bộ thời gian. Màn Sản lượng Thi công: "Tổng đối tượng" = tongSoDoiTuong (GỒM CẢ đối tượng chưa có sản lượng), "Có sản lượng" = soDoiTuongCoSanLuong, "Tổng SL kỳ lọc" = giaTriTrongKy, "SL hôm nay" = giaTriHomNay, "Vướng mắc" = soVuongMacDangMo; hỏi "bao nhiêu đối tượng có sản lượng" thì trả soDoiTuongCoSanLuong. Hỏi sản lượng tháng/năm/kỳ thì trả giaTriTrongKy (sản lượng đã báo), so với kỳ trước = soVoiKyTruoc.
+        Không dùng khi: cần danh sách, xếp hạng, xu hướng hoặc chi tiết từng đối tượng -> sanluong_danh_sach_doi_tuong, sanluong_xep_hang, sanluong_xu_huong; nghiệm thu đạt, không đạt -> sanluong_nghiem_thu.
         """)
     public SanLuongTongQuanToolResponse sanLuongTongQuan(
         @ToolParam(description = ToolParamDescriptions.DOI_TUONG, required = false) String doiTuong,
@@ -80,6 +81,7 @@ public final class SanLuongTools implements McpToolGroup {
         Xu hướng sản lượng theo thời gian (ngày, tuần, tháng)
         Dùng khi: sản lượng tăng hay giảm theo thời gian; sản lượng từng tháng năm nay; biểu đồ sản lượng theo tuần; mấy tháng nay làm ăn lên hay xuống
         Trả về: sản lượng từng kỳ con trong khoảng ngày (ngày/tuần/tháng tự chọn theo độ dài khoảng).
+        Không dùng khi: chỉ cần tổng kỳ này -> sanluong_tong_quan; xếp hạng -> sanluong_xep_hang.
         """)
     public SanLuongXuHuongResponse sanLuongXuHuong(
         @ToolParam(description = ToolParamDescriptions.DOI_TUONG, required = false) String doiTuong,
@@ -98,6 +100,7 @@ public final class SanLuongTools implements McpToolGroup {
         Dùng khi: hôm nay nhà thầu nào đã báo sản lượng; ai chưa báo sản lượng tuần này; bên nào chưa gửi số liệu thi công
         Trả về: danh sách nhà thầu theo 1 trạng thái báo sản lượng; có phân trang.
         Lưu ý: chọn trạng thái bằng trangThai (da_bao hoặc chua_bao); cần cả hai nhóm thì gọi 2 lần.
+        Không dùng khi: trạm chậm cập nhật thi công -> doituongton_thieu_cap_nhat; sản lượng theo nhà thầu -> sanluong_xep_hang.
         """)
     public SanLuongNhaThauBaoCaoResponse sanLuongNhaThauBaoCao(
         @ToolParam(description = ToolParamDescriptions.HOP_DONG, required = false) String hopDong,
@@ -118,6 +121,7 @@ public final class SanLuongTools implements McpToolGroup {
         Dùng khi: bao nhiêu hạng mục nghiệm thu không đạt và lý do; giá trị nghiệm thu đạt; còn bao nhiêu hạng mục chờ nghiệm thu; khối lượng nào bị trả về
         Trả về: số hạng mục và giá trị đạt, không đạt (kèm lý do, phân trang), chờ nghiệm thu.
         Lưu ý: lọc ngày theo ngày nghiệm thu; không truyền ngày thì tính toàn bộ.
+        Không dùng khi: tổng giá trị sản lượng -> sanluong_tong_quan; sản lượng từng đối tượng -> sanluong_danh_sach_doi_tuong.
         """)
     public SanLuongNghiemThuResponse sanLuongNghiemThu(
         @ToolParam(description = ToolParamDescriptions.DOI_TUONG, required = false) String doiTuong,
@@ -137,6 +141,7 @@ public final class SanLuongTools implements McpToolGroup {
         Danh sách đối tượng (trạm/tuyến) chưa có sản lượng hoàn thành trong kỳ
         Dùng khi: trạm nào chưa có sản lượng tháng này; trạm nào chưa làm được gì; đối tượng nào cả quý không ghi nhận sản lượng
         Trả về: đối tượng, hợp đồng, nhà thầu, khu vực, số hạng mục, có vướng mắc mở hay không; có phân trang.
+        Không dùng khi: đối tượng đã có sản lượng -> sanluong_danh_sach_doi_tuong; số tổng hợp -> sanluong_tong_quan.
         """)
     public SanLuongDoiTuongChuaCoResponse sanLuongDoiTuongChuaCo(
         @ToolParam(description = ToolParamDescriptions.HOP_DONG, required = false) String hopDong,
@@ -155,6 +160,7 @@ public final class SanLuongTools implements McpToolGroup {
         Danh sách sản lượng theo từng đối tượng (trạm/tuyến)
         Dùng khi: từng trạm làm được bao nhiêu; bảng sản lượng từng trạm của hợp đồng X; trạm nào có sản lượng hôm nay
         Trả về: mã, tỉnh, khu vực, hợp đồng, nhà thầu, SL tổng, SL hôm nay, thi công gần nhất, hạng mục đã làm/tổng, vướng mắc; có phân trang và sắp xếp.
+        Không dùng khi: chỉ cần số tổng hợp -> sanluong_tong_quan; hạng mục đã làm của một trạm -> sanluong_hang_muc_doi_tuong.
         """)
     public SanLuongDanhSachDoiTuongResponse sanLuongDanhSachDoiTuong(
         @ToolParam(description = ToolParamDescriptions.DOI_TUONG, required = false) String doiTuong,
@@ -177,6 +183,7 @@ public final class SanLuongTools implements McpToolGroup {
         Dùng khi: trạm X còn hạng mục nào chưa làm; tuyến X đã làm những hạng mục gì; trạm X còn phải làm những gì
         Trả về: hạng mục đã làm và chưa làm của từng đối tượng.
         Lưu ý: tối đa 5 đối tượng, ngăn cách bằng dấu phẩy.
+        Không dùng khi: sản lượng tổng của trạm -> sanluong_danh_sach_doi_tuong; số tổng hợp theo kỳ -> sanluong_tong_quan.
         """)
     public SanLuongHangMucDoiTuongResponse sanLuongHangMucDoiTuong(
         @ToolParam(description = "Mã hoặc ID đối tượng cụ thể (không phải loại đối tượng); nhiều đối tượng ngăn cách bằng dấu phẩy") String doiTuong) {

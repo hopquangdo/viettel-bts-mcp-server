@@ -7,7 +7,7 @@ Tổng cộng **48 tool**, chia theo module nghiệp vụ; chỉ đọc, truy v�
 - Mỗi module: `*_tong_quan` (chỉ số tổng hợp, không phân trang, không trả danh sách), `*_danh_sach`/`*_tim_kiem` (liệt kê, có phân trang), `*_xep_hang` (top theo 1 chiều `theo`) và các tool chuyên biệt. Không có tool theo màn hình/dashboard: chỉ số trên màn nào cũng map vào tool của module sở hữu dữ liệu.
 - Bộ lọc dùng chung (khu vực, tỉnh, nhà thầu, hợp đồng, loại hợp đồng, đối tượng): truyền ID, mã hoặc tên; tên mơ hồ báo lỗi kèm ứng viên.
 - Tiền trả về đã định dạng ("1,25 tỷ đồng", qua `@Tien`/`McpFormat.tien`), tỷ lệ dạng "82,5%".
-- Web + business-api là nguồn chuẩn: mô tả tool ghi nhãn trên màn ↔ trường. Khi 2 màn tính khác nhau (vd Dashboard "Tổng sản lượng năm" = `giaTriHoanThanh` vs màn Sản lượng "Tổng SL kỳ lọc" = `giaTriTrongKy`), tool trả cả 2 trường.
+- Web + business-api là nguồn chuẩn: mô tả tool ghi nhãn trên màn ↔ trường. Sản lượng kỳ/tháng/năm trả `giaTriTrongKy` (khớp màn Sản lượng "Tổng SL kỳ lọc"); trường Dashboard `giaTriHoanThanh` đã ẩn khỏi tool.
 
 ## Tóm tắt
 

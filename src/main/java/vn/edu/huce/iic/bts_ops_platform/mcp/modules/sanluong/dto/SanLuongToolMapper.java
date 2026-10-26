@@ -67,17 +67,6 @@ public final class SanLuongToolMapper {
     }
 
     /** % tăng trưởng kiểu Dashboard (DashboardTinhToanHelper.growthPercent): kỳ trước 0 -> 0% hoặc +100%; null khi không có số. */
-    private static String tangTruong(BigDecimal hienTai, BigDecimal kyTruoc) {
-        if (hienTai == null) {
-            return null;
-        }
-        BigDecimal truoc = kyTruoc != null ? kyTruoc : BigDecimal.ZERO;
-        BigDecimal pct = truoc.signum() == 0
-                ? (hienTai.signum() == 0 ? BigDecimal.ZERO : BigDecimal.valueOf(100))
-                : hienTai.subtract(truoc).multiply(BigDecimal.valueOf(100)).divide(truoc, 1, java.math.RoundingMode.HALF_UP);
-        return (pct.signum() > 0 ? "+" : "") + McpFormat.phanTram(pct);
-    }
-
     public static SanLuongTongQuanToolResponse tongQuan(SanLuongTongQuanResponse tq, double nguongHoanThanhThap) {
         var sum = tq.summary();
         var pr = tq.progress();
@@ -102,9 +91,6 @@ public final class SanLuongToolMapper {
                 pr.getNotStartedCount(),
                 pr.getLowCompletionCount(),
                 McpFormat.phanTram(BigDecimal.valueOf(nguongHoanThanhThap)),
-                McpFormat.tien(tq.thanhTienHoanThanh()),
-                McpFormat.tien(tq.thanhTienHoanThanhKyTruoc()),
-                tangTruong(tq.thanhTienHoanThanh(), tq.thanhTienHoanThanhKyTruoc()),
                 soVoi);
     }
 

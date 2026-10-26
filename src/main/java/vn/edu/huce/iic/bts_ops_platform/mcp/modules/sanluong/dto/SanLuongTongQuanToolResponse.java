@@ -10,10 +10,6 @@ import com.fasterxml.jackson.annotation.JsonInclude;
  * @param soDoiTuongCoSanLuong      số đối tượng đã có sản lượng trong kỳ
  * @param giaTriTrongKy             tổng giá trị sản lượng đã báo trong kỳ
  * @param tyLeHoanThanhHangMuc      tỷ lệ hoàn thành hạng mục bình quân theo đối tượng
- * @param giaTriHoanThanh           thành tiền sản lượng hoàn thành trong kỳ (đơn giá × KL hoàn thành, trạng thái hoàn thành/khảo sát/thiết kế):
- *                                  ô "Tổng sản lượng năm" (kỳ = cả năm) / "Sản lượng tháng" (kỳ = 1 tháng) trên Dashboard
- * @param giaTriHoanThanhKyTruoc    như trên cho kỳ trước (năm trước / tháng trước)
- * @param tangTruongHoanThanh       "+100%": so với kỳ trước, cùng cách tính Dashboard (kỳ trước = 0 và kỳ này > 0 thì +100%)
  * @param soDoiTuongHoanThanhThap   số đối tượng đang thi công có tỷ lệ hoàn thành dưới {@code nguongHoanThanhThap}
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
@@ -32,9 +28,6 @@ public record SanLuongTongQuanToolResponse(
         int soDoiTuongChuaBatDau,
         int soDoiTuongHoanThanhThap,
         String nguongHoanThanhThap,
-        String giaTriHoanThanh,
-        String giaTriHoanThanhKyTruoc,
-        String tangTruongHoanThanh,
         SoVoiKyTruoc soVoiKyTruoc) {
 
     /**
